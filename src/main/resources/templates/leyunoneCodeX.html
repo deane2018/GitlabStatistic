@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>首页</title>
+    <script th:src="@{js/highcharts.js}" type="application/javascript"></script>
+    <script th:src="@{js/vue.js}" type="application/javascript"></script>
+    <!--    <script src="./js/vue.js" type="application/javascript"></script>-->
+    <!-- 引入样式 -->
+    <link rel="stylesheet" th:href="@{/element/theme/index.css}"/>
+    <!--    <link rel="stylesheet" href="./element/theme/index.css"/>-->
+    <!-- 引入组件库 -->
+    <script th:src="@{/element/index.js}" type="application/javascript"></script>
+    <!--    <script src="./element/index.js" type="application/javascript"></script>-->
+
+    <script src="./js/axios.js"></script>
+
+</head>
+<body>
+<div id="app" style="width: 80%;margin-left: 200px">
+    <el-tabs v-model="first" @tab-click="handleClick">
+        <el-tab-pane label="成员Code" name="first">
+            <el-collapse accordion v-infinite-scroll="loadUser">
+                <el-collapse-item v-for="(item,index) in users">
+                    <template slot="title">
+                        {{item.userName}}<i class="el-icon-user"></i>
+                        &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+                        {{item.codeAdditions}}
+                        &nbsp;&nbsp;&nbsp;
+                        {{item.codeDeletions}}
+                        &nbsp;&nbsp;&nbsp;
+                        {{item.codeTotal}}
+                    </template>
+                    <el-button class="btn-cell" @click="" v-for="(project,index2) in item.projectList">
+                        {{project.projectName}}
+                    </el-button>
+                </el-collapse-item>
+            </el-collapse>
+        </el-tab-pane>
+        <el-tab-pane label="提交历史" name="second">
+            <el-card class="box-card" v-for="(commit,index) in commits">
+                {{commit.message}}
+            </el-card>
+        </el-tab-pane>
+        <el-tab-pane label="图表" name="third">
+            <div>
+                <!--人员提交记录量-->
+                <div>
+                    <div class="block">
+                        <span class="demonstration">时间：</span>
+                        <el-date-picker
+                                v-model="usertimecodeTime"
+                                type="daterange"
+                                align="right"
+                                unlink-panels
+                                range-separator="至"
+                                start-placeholder="开始日期"
+                                end-placeholder="结束日期"
+                                value-format="yyyy-MM-dd"
+                                :picker-options="pickerOptions">
+                        </el-date-picker>
+                        <el-button icon="el-icon-search" @click="usertimecodeSearch" circle></el-button>
+                    </div>
+                    <div id="usertimecode" :style="{ height: chartBoxHeight }" class="usertimecodeChart"></div>
+                </div>
+                <!--指定项目下的人员提交记录-->
+                <div>
+                    <div class="block">
+                        <span class="demonstration">时间：</span>
+                        <el-date-picker
+                                v-model="projecttimecodeTime"
+                                type="daterange"
+                                align="right"
+                                unlink-panels
+                                range-separator="至"
+                                start-placeholder="开始日期"
+                                end-placeholder="结束日期"
+                                value-format="yyyy-MM-dd"
+                                :picker-options="pickerOptions">
+                        </el-date-picker>
+                        <el-select v-model="form.projectId" placeholder="请选择">
+                            <el-option
+                                    v-for="item in projectList"
+                                    :key="item.id"
+                                    :label="item.projectName"
+                                    :value="item.id">
+                            </el-option>
+                        </el-select>
+
+                        <el-button icon="el-icon-search" @click="projecttimecodeSearch" circle></el-button>
+                    </div>
+                    <div id="projecttimecode" :style="{ height: chartBoxHeight }" class="usertimecodeChart"></div>
+                </div>
+                <!--人员代码总量-->
+                <div>
+                    <div id="userbasecode" :style="{ height: chartBoxHeight }" class="tablecodeChart"></div>
+                </div>
+            </div>
+        </el-tab-pane>
+    </el-tabs>
+</div>
+</body>
+</html>
+<script>
+    var app = new Vue({
+        el: '#app',
+        data() {
+            return {
+                chartBoxHeight: '433px',
+                first: "third",
+                userIndex: 1,
+                userSize: 20,
+                users: [],
+                commitIndex: 1,
+                commitSize: 20,
+                commits: [],
+                xLabelList: [],
+                usertimecodeTime: "",
+                projecttimecodeTime: "",
+                projectList: [],
+                form: {
+                    projectId: ""
+                }
+            }
+        },
+        mounted: function () {
+            //初始用户列表
+            this.getUserList();
+            //初始提交记录列表
+            this.getCommitList();
+            //初始人员提交表格
+            this.userTimeCodeList(null, null, 0, null);
+            //初始项目提交表格
+            this.getProjectList();
+            //初始化人员代码量表格
+            this.userBaseCodeList();
+        },
+        methods: {
+            usertimecodeSearch() {
+                var date = this.usertimecodeTime;
+                this.userTimeCodeList(date[0], date[1], 0, null);
+            },
+            projecttimecodeSearch() {
+                var date = this.projecttimecodeTime;
+                this.userTimeCodeList(date[0], date[1], 1, this.form.projectId);
+            },
+            loadUser() {
+                this.userSize = this.userSize + 10;
+                this.getUserList();
+            },
+            loadCommit() {
+                this.commitIndex = this.commitIndex + 10;
+                this.commitSize = this.commitSize + 10;
+                this.getCommitList();
+            },
+            getProjectList() {
+                axios({
+                    url: "/codex/project/projects"
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        this.projectList = data.data;
+                        this.form.projectId = this.projectList[0].id;
+                        this.userTimeCodeList(null, null, 1, this.projectList[0].id);
+                    } else {
+                        this.$message.error("项目列表查询失败");
+                    }
+                })
+            },
+            handleClick() {
+
+            },
+            getUserList() {
+                axios({
+                    url: "/codex/user/alluser",
+                    params: {
+                        index: this.userIndex,
+                        size: this.userSize
+                    }
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        this.users = data.data;
+                    } else {
+                        this.$message.error(data.message);
+                    }
+                })
+            },
+            getCommitList(userName, projectId) {
+                axios({
+                    url: "/codex/commit/commitBy",
+                    params: {
+                        index: this.commitIndex,
+                        size: this.commitSize,
+                        committerName: userName,
+                        projectId: projectId
+                    }
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        this.commits = data.data;
+                    } else {
+                        this.$message.error(data.message);
+                    }
+                })
+            },
+            userTimeCodeList(startDate, endDate, type, projectId) {
+                axios({
+                    url: "/codex/statistics/userProjectTimeCode",
+                    params: {"startDate": startDate, "endDate": endDate, "projectId": projectId}
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        //0人员时间提交记录  1指定项目下人员时间提交记录
+                        if (type === 0) {
+                            this.getTimeChart("usertimecode", data.data);
+                        }
+                        if (type === 1) {
+                            this.getTimeChart('projecttimecode', data.data);
+                        }
+                    } else {
+                        this.$message.error("人员时间提交查询失败");
+                    }
+                })
+            },
+            userBaseCodeList() {
+                axios({
+                    url: "/codex/statistics/userbasecode"
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        console.log(data)
+                        this.getTableChart(userbasecode,data.data);
+                    } else {
+                        this.$message.error("人员时间提交查询失败");
+                    }
+                })
+            },
+            getTableChart(id, data) {
+                var chart = Highcharts.chart(id, {
+                    chart: {
+                        type: 'column'
+                    },
+                    title: {
+                        text: data.title
+                    },
+                    subtitle: {
+                        text: '数据截止' + new Date().toDateString()
+                    },
+                    xAxis: {
+                        type: 'category',
+                        labels: {
+                            rotation: -45  // 设置轴标签旋转角度
+                        }
+                    },
+                    yAxis: {
+                        min: 0,
+                        title: {
+                            text: '行'
+                        }
+                    },
+                    legend: {
+                        enabled: false
+                    },
+                    tooltip: {
+                        pointFormat: '代码总量: <b>{point.y:.1f} 行</b>'
+                    },
+                    series: [{
+                        name: '总量',
+                        data: data.seriesData,
+                        dataLabels: {
+                            enabled: true,
+                            rotation: -90,
+                            color: '#ffffff',
+                            align: 'right',
+                            y: 10
+                        }
+                    }]
+                });
+            },
+            getTimeChart(id, data) {
+                var series = data.series;
+                series.map((t) => {
+                    t.color = '#' + (Math.random() * 0xffffff << 0).toString(16);
+                })
+                var chart = Highcharts.chart(id, {
+                    // 图表 设置默认直线
+                    chart: {
+                        type: "spline", // 曲折线spline 柱形图column
+                    },
+                    // 图标题
+                    title: {
+                        text: null,
+                    },
+                    // 副标题
+                    subtitle: {
+                        text: data.title,
+                        style: {
+                            fontSize: "18px",
+                        },
+                        align: "left",
+                    },
+                    lang: {
+                        noData: "暂无数据",
+                    },
+                    xAxis: {
+                        gridLineWidth: 1,
+                        tickWidth: 0,
+                        tickInterval: 1,
+                        categories: data.xchart, // 横坐标
+                    },
+                    // 导出功能
+                    exporting: {
+                        enabled: false,
+                    },
+                    // 版权
+                    credits: {
+                        enabled: false,
+                    },
+                    // 提示框属性
+                    tooltip: {},
+                    // 纵坐标属性
+                    yAxis: {
+                        title: {
+                            text: null,
+                        },
+                        min: 0, // 全部数据为0时，y轴底部显示,1
+                        minRange: 1, // 步长
+                    },
+                    // 图例属性
+                    legend: {
+                        // 样式
+                        itemStyle: {
+                            fontSize: "14px",
+                            color: '#515A6E',
+                        },
+                        // 悬浮样式
+                        itemHoverStyle: {
+                            fontSize: "14px",
+                            color: '#1d2727',
+                        },
+                        itemDistance: 60, // 间距
+                    },
+                    plotOptions: {
+                        series: {
+                            connectNulls: true, // 连接数据为null的前后点
+                            label: {
+                                connectorAllowed: false,
+                            },
+                        },
+                    },
+                    // 系列（数据）
+                    series: data.series,
+                });
+            }
+        }
+    })
+</script>
+<style>
+    .btn-cell {
+        text-align: center;
+        width: 90%;
+        padding: 15px;
+        margin: 3px;
+    }
+</style>

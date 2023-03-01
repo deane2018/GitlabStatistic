@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.leyunone.codex.dao.mapper.GroupUserMapper">
+    <select id="selectCodeByGroup" resultType="com.leyunone.codex.model.vo.GroupUserVO">
+        SELECT g.group_name,
+               sum(u.code_total) code_total
+        FROM `x_group_user` gu
+                 left join x_group g on gu.group_id = g.group_id
+                 left join x_user u on gu.user_name = u.user_name
+        group by gu.group_id
+
+    </select>
+    <select id="groupTimeCode" resultType="com.leyunone.codex.model.vo.GroupUserVO">
+        SELECT
+        g.group_name,
+        sum(c.total) code_total,
+        c.commit_date
+        FROM
+        `x_commit` c
+        LEFT JOIN x_group_user gu ON c.committer_name = gu.user_name
+        left join x_group g on gu.group_id = g.group_id
+        WHERE
+        1 = 1
+        <if test="con.startDate!=null">
+            AND c.commit_date >= #{con.startDate}
+        </if>
+        <if test="con.endDate!=null">
+            AND c.commit_date &lt;= #{con.endDate}
+        </if>
+        group by c.commit_date,g.group_id;
+    </select>
+</mapper>

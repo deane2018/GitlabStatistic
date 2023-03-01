@@ -1,0 +1,51 @@
+server:
+  servlet:
+    context-path: /codex
+  port: 7878
+spring:
+  application:
+    name: leyunone-codex
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:mysql://127.0.0.1:3306/codex?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true&useSSL=false
+    username: root
+    password: root
+    filters: stat
+    maxActive: 20
+    initialSize: 1
+    maxWait: 60000
+    minIdle: 1
+    timeBetweenEvictionRunsMillis: 60000
+    minEvictableIdleTimeMillis: 300000
+    validationQuery: select 1 FROM DUAL
+    testWhileIdle: true
+    testOnBorrow: false
+    testOnReturn: false
+    poolPreparedStatements: true
+    maxOpenPreparedStatements: 20
+    driver-class-name: com.mysql.jdbc.Driver
+#  thymeleaf:
+#    prefix: /templates/
+#    suffix: .html
+#    encoding: UTF-8
+#    mode: HTML5
+# XXL-JOb
+xxl:
+  job:
+    admin:
+      addresses: http://81.68.137.33:9991/xxl-job-admin
+    accessToken:
+    executor:
+      appname: codex
+      address:
+      ip:
+      port: 9997
+      logpath:
+      logretentiondays: 30
+gitlab:
+  token:
+  url:
+mybatis-plus:
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.leyunone.codex.dao.mapper.CommitMapper">
+    <insert id="batchInsert">
+        INSERT INTO x_commit
+        ('id','commit_date','committer_email','committer_name','title','project_id','message','additions','deletions','total')
+        VALUES
+        <foreach collection="commits" item="item" separator=",">
+            (#{item.id},#{item.commitDate},#{item.committerEmail},#{item.committerName},#{item.title},#{item.projectId},#{item.message}
+            ,#{item.additions},#{item.deletions},#{item.total})
+        </foreach>
+        ON DUPLICATE key update
+        id = values(id),
+        commit_date = values(commit_date),
+        committer_email = values(committer_email),
+        committer_name = values(committer_name),
+        title = values(title),
+        project_id = values(project_id),
+        message = values (message),
+        additions = values(additions),
+        deletions = values(deletions),
+        total = values(total)
+    </insert>
+
+    <select id="selectLastDate" resultType="date">
+        SELECT Max(commit_date) FROM x_commit
+    </select>
+
+    <select id="selectProjectCodeGroupUser" resultType="com.leyunone.codex.model.vo.CommitVO">
+        select
+        DATE_FORMAT(t1.date,'%Y-%m-%d') as date, committer_name, total
+        from
+        (
+        select
+        @cdate := date_add(@cdate, INTERVAL -1 DAY) as date
+        from
+        (
+        select
+        @cdate := date_add(#{con.endDate}, INTERVAL +1 DAY)
+        from
+            x_system
+        ) tmp1
+        where
+        date_add(@cdate, INTERVAL -1 DAY) &gt;= #{con.startDate} and date_add(@cdate, INTERVAL -1 DAY) &lt;= #{con.endDate}
+        ) t1
+        left join (
+            SELECT committer_name,sum(total) total,DATE_FORMAT(commit_date, '%Y-%m-%d') AS date FROM `x_commit`
+            WHERE 1 = 1
+            <if test="con.startDate!=null">
+                AND commit_date >= #{con.startDate}
+            </if>
+            <if test="con.endDate!=null">
+                AND commit_date &lt;= #{con.endDate}
+            </if>
+            <if test="con.projectId">
+                AND project_id = #{con.projectId}
+            </if>
+            group by committer_name,DATE_FORMAT(commit_date,'%Y-%m-%d')
+        ) t2
+        on t1.date = STR_TO_DATE(t2.date, '%Y-%m-%d')
+        order by date asc
+    </select>
+    <select id="preDate" resultType="string">
+        	SELECT
+		@cdate := date_add( @cdate, INTERVAL - 1 DAY ) AS date
+	FROM
+		( SELECT @cdate := date_add(#{date}, INTERVAL + 1 DAY ) FROM x_system ) tmp1
+    </select>
+</mapper>
