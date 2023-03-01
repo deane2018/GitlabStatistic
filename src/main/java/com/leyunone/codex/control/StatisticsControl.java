@@ -41,4 +41,10 @@ public class StatisticsControl {
         ChartVO chartVO = statisticsService.userProjectTimeCode(query);
         return DataResponse.of(chartVO);
     }
+
+    @RequestMapping("/groupTimeCode")
+    public DataResponse groupTimeCode(CodeTimeQuery query){
+        ChartVO chartVO = statisticsService.groupTimeCode(query);
+        return DataResponse.of(chartVO);
+    }
 }

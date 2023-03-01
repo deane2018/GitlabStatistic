@@ -11,10 +11,27 @@
 
     </select>
     <select id="groupTimeCode" resultType="com.leyunone.codex.model.vo.GroupUserVO">
+        select
+        DATE_FORMAT(t1.date,'%Y-%m-%d') as date, group_name, total
+        from
+        (
+        select
+        @cdate := date_add(@cdate, INTERVAL -1 DAY) as date
+        from
+        (
+        select
+        @cdate := date_add(#{con.endDate}, INTERVAL +1 DAY)
+        from
+        x_system
+        ) tmp1
+        where
+        date_add(@cdate, INTERVAL -1 DAY) &gt;= #{con.startDate} and date_add(@cdate, INTERVAL -1 DAY) &lt;=#{con.endDate}
+        ) t1
+        left join (
         SELECT
         g.group_name,
-        sum(c.total) code_total,
-        c.commit_date
+        sum(c.total) total,
+        DATE_FORMAT(c.commit_date, '%Y-%m-%d') AS date
         FROM
         `x_commit` c
         LEFT JOIN x_group_user gu ON c.committer_name = gu.user_name
@@ -27,6 +44,9 @@
         <if test="con.endDate!=null">
             AND c.commit_date &lt;= #{con.endDate}
         </if>
-        group by c.commit_date,g.group_id;
+        group by DATE_FORMAT(c.commit_date,'%Y-%m-%d'),g.group_id
+        ) t2
+        on t1.date = STR_TO_DATE(t2.date, '%Y-%m-%d')
+        order by date asc
     </select>
 </mapper>

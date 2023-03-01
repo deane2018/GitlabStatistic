@@ -11,5 +11,9 @@ public class GroupUserVO {
 
     private Integer codeTotal;
 
+    private Integer total;
+
     private LocalDateTime commitDate;
+
+    private String date;
 }

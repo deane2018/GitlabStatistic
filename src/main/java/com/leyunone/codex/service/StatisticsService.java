@@ -62,38 +62,18 @@ public class StatisticsService {
     }
 
     /**
-     * 统计 分组后 时间 代码提交情况
-     *
-     * @param codeTimeQuery
-     * @return
-     */
-    public List<GroupUserVO> groupTimeCode(CodeTimeQuery codeTimeQuery) {
-        List<GroupUserVO> groupUserVOS = groupUserDao.groupTimeCode(codeTimeQuery);
-        return groupUserVOS;
-    }
-
-    /**
      * 统计 人员根据时间
      *
      * @param codeTimeQuery
      * @return
      */
     public ChartVO userProjectTimeCode(CodeTimeQuery codeTimeQuery) {
-        if (StringUtils.isBlank(codeTimeQuery.getStartDate())) {
-            String statisticsDate = StatisticsTypeEnum.getStatisticsType(0).getStatisticsDate();
-            codeTimeQuery.setStartDate(statisticsDate);
-        }
-        if (StringUtils.isBlank(codeTimeQuery.getEndDate())) {
-            String endDate = this.format.format(LocalDateTime.now());
-            codeTimeQuery.setEndDate(endDate);
-        }
+        this.reloadTime(codeTimeQuery);
         //前置加载数据库日期
         List<String> strings = commitDao.preDate(codeTimeQuery.getEndDate());
 
         List<CommitVO> commitVOS = commitDao.selectProjectCodeGroupUser(codeTimeQuery);
-        //解析页面可用的chart对象
-        Map<String, ChartBean> maps = new HashMap<>();
-        //日期 -》 提交人集合
+        //解析页面可用的chart对象 日期 -》 提交人集合
         Map<String, List<CommitVO>> datamap = commitVOS.stream().collect(Collectors.groupingBy(CommitVO::getDate));
 
         //X坐标
@@ -137,5 +117,70 @@ public class StatisticsService {
         chartVO.setSeries(series);
 
         return chartVO;
+    }
+
+    /**
+     * 统计 小组随时间
+     * @param codeTimeQuery
+     * @return
+     */
+    public ChartVO groupTimeCode(CodeTimeQuery codeTimeQuery) {
+        this.reloadTime(codeTimeQuery);
+        //前置加载数据库日期
+        List<String> strings = commitDao.preDate(codeTimeQuery.getEndDate());
+
+        List<GroupUserVO> groupUserVOS = groupUserDao.groupTimeCode(codeTimeQuery);
+
+        //解析页面可用的chart对象 日期 -》 提交人集合
+        Map<String, List<GroupUserVO>> datamap = groupUserVOS.stream().collect(Collectors.groupingBy(GroupUserVO::getDate));
+
+        //X坐标
+        Set<String> setX = groupUserVOS.stream().map(GroupUserVO::getDate).collect(Collectors.toSet());
+        Collections.sort(new ArrayList<>(setX));
+        //提交人
+        Set<String> names = groupUserVOS.stream().filter((t) -> StringUtils.isNotBlank(t.getGroupName())).map(GroupUserVO::getGroupName).collect(Collectors.toSet());
+        Map<String, List<Integer>> nameDate = new HashMap<>();
+        names.forEach((t) -> nameDate.put(t, new ArrayList<>()));
+
+        for (String date : setX) {
+            List<GroupUserVO> groupUsers = datamap.get(date);
+            if (StringUtils.isBlank(CollectionUtil.getFirst(groupUsers).getGroupName())) {
+                //全为空
+                Collection<List<Integer>> values = nameDate.values();
+                for (List<Integer> data : values) {
+                    data.add(0);
+                }
+            } else {
+                //找到每个提交的对应人员
+                for (GroupUserVO groupUserVO : groupUsers) {
+                    List<Integer> integers = nameDate.get(groupUserVO.getGroupName());
+                    integers.add(groupUserVO.getTotal());
+                }
+            }
+        }
+        ChartVO chartVO = new ChartVO();
+        chartVO.setXChart(CollectionUtil.newArrayList(setX));
+        chartVO.setTitle("部门代码提交量");
+        List<ChartBean> series = new ArrayList<>();
+        for (String name : nameDate.keySet()) {
+            ChartBean chartBean = new ChartBean();
+            chartBean.setData(nameDate.get(name));
+            chartBean.setName(name);
+            series.add(chartBean);
+        }
+        chartVO.setSeries(series);
+
+        return chartVO;
+    }
+
+    private void reloadTime(CodeTimeQuery codeTimeQuery){
+        if (StringUtils.isBlank(codeTimeQuery.getStartDate())) {
+            String statisticsDate = StatisticsTypeEnum.getStatisticsType(0).getStatisticsDate();
+            codeTimeQuery.setStartDate(statisticsDate);
+        }
+        if (StringUtils.isBlank(codeTimeQuery.getEndDate())) {
+            String endDate = this.format.format(LocalDateTime.now());
+            codeTimeQuery.setEndDate(endDate);
+        }
     }
 }
