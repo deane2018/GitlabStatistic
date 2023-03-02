@@ -91,7 +91,7 @@ public class ActionService {
         Set<String> groupUser = groupUsers.stream().map(GroupUser::getUserName).collect(Collectors.toSet());
         Iterator<UserVO> iterator = users.iterator();
         while(iterator.hasNext()){
-            if(groupUser.contains(iterator.next())) iterator.remove();
+            if(groupUser.contains(iterator.next().getUserName())) iterator.remove();
         }
         return users;
     }

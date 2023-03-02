@@ -257,6 +257,7 @@
 
     <el-dialog title="人员分组" :visible.sync="dialogGroup">
         <el-transfer
+                style="margin-left: 160px"
                 v-model="groupValue"
                 :props="{
                       key: 'value',
@@ -704,19 +705,24 @@
             },
             editGroup(groupUsers, groupId) {
                 var data = [];
-                this.noGroupUsers.map((t) => {
-                    data.push({
-                        value: t.userName,
-                        desc: t.userName
-                    })
-                });
+                if (this.noGroupUsers != null) {
+                    this.noGroupUsers.map((t) => {
+                        data.push({
+                            value: t.userName,
+                            desc: t.userName
+                        })
+                    });
+                }
                 var value = [];
-                groupUsers.map((t) => {
-                    value.push(t.userName);
-                })
-                this.groupValue = value;
+                if (groupUsers != null) {
+                    groupUsers.map((t) => {
+                        value.push(t.userName);
+                    })
+                }
+
                 this.groupData = data;
                 this.dialogGroup = true;
+                this.groupValue = value;
                 this.groupId = groupId;
             },
             okGroup() {
@@ -733,6 +739,7 @@
                         this.dialogGroup = false;
                         this.$message.success("修改成功");
                         this.getNoGroupUsers();
+                        this.getGroupList();
                     } else {
                         this.$message.error("修改分组失败");
                     }
