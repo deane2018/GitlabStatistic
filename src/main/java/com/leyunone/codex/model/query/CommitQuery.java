@@ -18,4 +18,8 @@ public class CommitQuery {
     private String committerName;
 
     private Integer projectId;
+
+    private String startDate;
+
+    private String endDate;
 }

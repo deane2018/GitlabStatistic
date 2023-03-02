@@ -23,7 +23,8 @@
     </insert>
 
     <select id="selectLastDate" resultType="date">
-        SELECT Max(commit_date) FROM x_commit
+        SELECT Max(commit_date)
+        FROM x_commit
     </select>
 
     <select id="selectProjectCodeGroupUser" resultType="com.leyunone.codex.model.vo.CommitVO">
@@ -38,32 +39,41 @@
         select
         @cdate := date_add(#{con.endDate}, INTERVAL +1 DAY)
         from
-            x_system
+        x_system
         ) tmp1
         where
-        date_add(@cdate, INTERVAL -1 DAY) &gt;= #{con.startDate} and date_add(@cdate, INTERVAL -1 DAY) &lt;= #{con.endDate}
+        date_add(@cdate, INTERVAL -1 DAY) &gt;= #{con.startDate} and date_add(@cdate, INTERVAL -1 DAY) &lt;=
+        #{con.endDate}
         ) t1
         left join (
-            SELECT committer_name,sum(total) total,DATE_FORMAT(commit_date, '%Y-%m-%d') AS date FROM `x_commit`
-            WHERE 1 = 1
-            <if test="con.startDate!=null">
-                AND commit_date >= #{con.startDate}
-            </if>
-            <if test="con.endDate!=null">
-                AND commit_date &lt;= #{con.endDate}
-            </if>
-            <if test="con.projectId">
-                AND project_id = #{con.projectId}
-            </if>
-            group by committer_name,DATE_FORMAT(commit_date,'%Y-%m-%d')
+        SELECT committer_name,sum(total) total,DATE_FORMAT(commit_date, '%Y-%m-%d') AS date FROM `x_commit`
+        WHERE 1 = 1
+        <if test="con.startDate!=null">
+            AND commit_date >= #{con.startDate}
+        </if>
+        <if test="con.endDate!=null">
+            AND commit_date &lt;= #{con.endDate}
+        </if>
+        <if test="con.projectId">
+            AND project_id = #{con.projectId}
+        </if>
+        group by committer_name,DATE_FORMAT(commit_date,'%Y-%m-%d')
         ) t2
         on t1.date = STR_TO_DATE(t2.date, '%Y-%m-%d')
         order by date asc
     </select>
+
     <select id="preDate" resultType="string">
-        	SELECT
-		@cdate := date_add( @cdate, INTERVAL - 1 DAY ) AS date
-	FROM
-		( SELECT @cdate := date_add(#{date}, INTERVAL + 1 DAY ) FROM x_system ) tmp1
+        SELECT @cdate := date_add(@cdate, INTERVAL - 1 DAY) AS date
+        FROM (SELECT @cdate := date_add(#{date}, INTERVAL + 1 DAY) FROM x_system) tmp1
+    </select>
+    <select id="selectSumGroupUser" resultType="com.leyunone.codex.model.vo.UserVO">
+        SELECT t.user_name, t.code_total
+        FROM (SELECT committer_name user_name, SUM(total) code_total
+              FROM x_commit
+              WHERE commit_date >= #{startDate}
+                AND commit_date &lt;= #{endDate}
+              GROUP BY committer_name) t
+        ORDER BY t.code_total
     </select>
 </mapper>

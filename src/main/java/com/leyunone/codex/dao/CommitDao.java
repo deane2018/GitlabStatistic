@@ -6,6 +6,7 @@ import com.leyunone.codex.model.bo.CommitBO;
 import com.leyunone.codex.model.query.CodeTimeQuery;
 import com.leyunone.codex.model.query.CommitQuery;
 import com.leyunone.codex.model.vo.CommitVO;
+import com.leyunone.codex.model.vo.UserVO;
 
 import java.util.Date;
 import java.util.List;
@@ -14,6 +15,8 @@ public interface CommitDao extends BaseDao<Commit> {
 
     Page<Commit> selectByPage(CommitQuery commitQuery);
 
+    List<UserVO> selectSumGroupUser(String startDate, String endDate);
+
     void saveBatch(List<CommitBO> commits);
 
     Date selectLastDate();
@@ -21,4 +24,5 @@ public interface CommitDao extends BaseDao<Commit> {
     List<CommitVO> selectProjectCodeGroupUser(CodeTimeQuery query);
 
     List<String> preDate(String date);
+
 }

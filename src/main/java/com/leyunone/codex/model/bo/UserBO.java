@@ -14,6 +14,8 @@ public class UserBO {
 
     private String userEmail;
 
+    private String userRealName;
+
     private Integer codeAdditions;
 
     private Integer codeDeletions;

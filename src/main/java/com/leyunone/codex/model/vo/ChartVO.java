@@ -13,6 +13,13 @@ public class ChartVO {
      */
     private String title;
 
+    private boolean ifImport = true;
+
+    /**
+     * 截止时间
+     */
+    private String date;
+
     /**
      * 横坐标
      */

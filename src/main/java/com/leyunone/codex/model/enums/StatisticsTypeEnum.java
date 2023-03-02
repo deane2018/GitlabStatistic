@@ -11,7 +11,7 @@ public enum StatisticsTypeEnum implements StatisticsDateConvert {
     STATISTICS_90_DAYS(0){
         @Override
         public String getStatisticsDate() {
-            Date dayDate = DateUtils.addDays(new Date(), -59);
+            Date dayDate = DateUtils.addDays(new Date(), -89);
                 SimpleDateFormat dayFormat = new SimpleDateFormat("YYYY-MM-dd");
             return dayFormat.format(dayDate);
         }

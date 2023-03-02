@@ -23,7 +23,7 @@ import java.util.List;
 /**
  * 抽象Repository服务类
  *
- * @author 乐云一
+ * @author pengli
  */
 public class BaseRepository<M extends BaseMapper<DO>, DO> extends ServiceImpl<M, DO> implements BaseDao<DO> {
 

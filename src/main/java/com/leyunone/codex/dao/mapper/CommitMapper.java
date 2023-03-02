@@ -5,6 +5,7 @@ import com.leyunone.codex.dao.entry.Commit;
 import com.leyunone.codex.model.bo.CommitBO;
 import com.leyunone.codex.model.query.CodeTimeQuery;
 import com.leyunone.codex.model.vo.CommitVO;
+import com.leyunone.codex.model.vo.UserVO;
 import org.apache.ibatis.annotations.Param;
 
 import java.util.Date;
@@ -19,4 +20,6 @@ public interface CommitMapper extends BaseMapper<Commit> {
     List<CommitVO> selectProjectCodeGroupUser(@Param("con") CodeTimeQuery con);
 
     List<String> preDate(String date);
+
+    List<UserVO> selectSumGroupUser(String startDate,String endDate);
 }

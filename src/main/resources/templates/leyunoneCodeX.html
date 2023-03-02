@@ -5,6 +5,8 @@
     <title>首页</title>
     <script th:src="@{js/highcharts.js}" type="application/javascript"></script>
     <script th:src="@{js/vue.js}" type="application/javascript"></script>
+    <script th:src="@{js/exporting.js}" type="application/javascript"></script>
+    <script src="https://code.hcharts.cn/plugins/zh_cn.js" type="application/javascript"></script>
     <!--    <script src="./js/vue.js" type="application/javascript"></script>-->
     <!-- 引入样式 -->
     <link rel="stylesheet" th:href="@{/element/theme/index.css}"/>
@@ -17,39 +19,84 @@
 
 </head>
 <body>
-<div id="app" style="width: 80%;margin-left: 200px">
+<div id="app" style="width: 80%;margin-left: 200px;height: 100%;">
     <el-tabs v-model="first" @tab-click="handleClick">
         <el-tab-pane label="成员Code" name="first">
-            <el-collapse accordion v-infinite-scroll="loadUser">
-                <el-collapse-item v-for="(item,index) in users">
-                    <template slot="title">
-                        {{item.userName}}<i class="el-icon-user"></i>
-                        &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-                        {{item.codeAdditions}}
-                        &nbsp;&nbsp;&nbsp;
-                        {{item.codeDeletions}}
-                        &nbsp;&nbsp;&nbsp;
-                        {{item.codeTotal}}
-                    </template>
-                    <el-button class="btn-cell" @click="" v-for="(project,index2) in item.projectList">
-                        {{project.projectName}}
-                    </el-button>
-                </el-collapse-item>
-            </el-collapse>
+            <div style="margin-top: 17px;overflow:auto;height: 1500px" v-infinite-scroll="load">
+                <el-collapse accordion>
+                    <el-collapse-item v-for="(item,index) in users">
+                        <template slot="title">
+                            <span style="margin-left: 50px">
+                                {{item.userName}}<i class="el-icon-user"></i>
+                            </span>
+                            <span style="float: right;text-align: center; margin-left: 110px; width: 600px;">
+                                <span style="color: red">删除总量：{{item.codeDeletions}}</span>
+                                <el-divider direction="vertical"></el-divider>
+                                <span style="color: blue">新增总量：{{item.codeAdditions}}</span>
+                                <el-divider direction="vertical"></el-divider>
+                                <span style="color: orange">总量：{{item.codeTotal}}</span>
+                            </span>
+                        </template>
+                        <el-button class="btn-cell" v-for="po in item.projectList"
+                                   @click="toCommit(item.userName,po.id)"
+                        >
+                            {{po.projectName}}
+                        </el-button>
+                    </el-collapse-item>
+                </el-collapse>
+            </div>
         </el-tab-pane>
         <el-tab-pane label="提交历史" name="second">
-            <el-card class="box-card" v-for="(commit,index) in commits">
-                {{commit.message}}
-            </el-card>
+            <div class="block date-select">
+                <span class="demonstration">时间：</span>
+                <el-date-picker
+                        v-model="time.commitTime"
+                        type="daterange"
+                        align="right"
+                        unlink-panels
+                        range-separator="至"
+                        start-placeholder="开始日期"
+                        end-placeholder="结束日期"
+                        value-format="yyyy-MM-dd"
+                        :picker-options="pickerOptions">
+                </el-date-picker>
+                <span class="demonstration">项目：</span>
+                <el-select clearable v-model="form.commit.projectId" placeholder="请选择">
+                    <el-option
+                            v-for="item in projectList"
+                            :key="item.id"
+                            :label="item.projectName"
+                            :value="item.id">
+                    </el-option>
+                </el-select>
+                <el-button icon="el-icon-search" @click="commitSearch" circle></el-button>
+
+                <span class="demonstration">当前人员：{{form.commit.userName}}</span>
+                <el-button type="danger" @click="cancelname" icon="el-icon-delete" circle></el-button>
+            </div>
+            <div style="margin-top: 17px;overflow:auto;height: 1500px" v-infinite-scroll="load">
+                <el-card class="box-card" v-for="(commit,index) in commits">
+                    <span>{{commit.id}} &nbsp; &nbsp; by {{commit.committerName}}</span>
+                    <br/>
+                    <br/>
+                    <span style="color: red">删除:{{commit.deletions}}</span>
+                    <el-divider direction="vertical"></el-divider>
+                    <span style="color: blue">新增:{{commit.additions}}</span>
+                    <el-divider direction="vertical"></el-divider>
+                    <span style="color: orange">总量:{{commit.total}}</span>
+                    <el-divider>{{commit.commitDate}}</el-divider>
+                    {{commit.message}}
+                </el-card>
+            </div>
         </el-tab-pane>
-        <el-tab-pane label="图表" name="third">
+        <el-tab-pane label="图表[时间]" name="third">
             <div>
                 <!--人员提交记录量-->
                 <div>
-                    <div class="block">
+                    <div class="block date-select">
                         <span class="demonstration">时间：</span>
                         <el-date-picker
-                                v-model="usertimecodeTime"
+                                v-model="time.usertimecodeTime"
                                 type="daterange"
                                 align="right"
                                 unlink-panels
@@ -65,10 +112,10 @@
                 </div>
                 <!--指定项目下的人员提交记录-->
                 <div>
-                    <div class="block">
+                    <div class="block date-select">
                         <span class="demonstration">时间：</span>
                         <el-date-picker
-                                v-model="projecttimecodeTime"
+                                v-model="time.projecttimecodeTime"
                                 type="daterange"
                                 align="right"
                                 unlink-panels
@@ -78,7 +125,8 @@
                                 value-format="yyyy-MM-dd"
                                 :picker-options="pickerOptions">
                         </el-date-picker>
-                        <el-select v-model="form.projectId" placeholder="请选择">
+                        <span class="demonstration">项目：</span>
+                        <el-select clearable v-model="form.projectId" placeholder="请选择">
                             <el-option
                                     v-for="item in projectList"
                                     :key="item.id"
@@ -91,16 +139,12 @@
                     </div>
                     <div id="projecttimecode" :style="{ height: chartBoxHeight }" class="usertimecodeChart"></div>
                 </div>
-                <!--人员代码总量-->
-                <div>
-                    <div id="userbasecode" :style="{ height: chartBoxHeight }" class="tablecodeChart"></div>
-                </div>
                 <!--小组提交记录量-->
                 <div>
-                    <div class="block">
+                    <div class="block date-select">
                         <span class="demonstration">时间：</span>
                         <el-date-picker
-                                v-model="grouptimecodeTime"
+                                v-model="time.grouptimecodeTime"
                                 type="daterange"
                                 align="right"
                                 unlink-panels
@@ -116,7 +160,115 @@
                 </div>
             </div>
         </el-tab-pane>
+        <el-tab-pane label="图表[总量]" name="four">
+            <!--人员代码总量-->
+            <div>
+                <div class="block date-select">
+                    <span class="demonstration">时间：</span>
+                    <el-date-picker
+                            v-model="time.usercodeTime"
+                            type="daterange"
+                            align="right"
+                            unlink-panels
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            value-format="yyyy-MM-dd"
+                            :picker-options="pickerOptions">
+                    </el-date-picker>
+                    <el-button icon="el-icon-search" @click="usercodeSearch" circle></el-button>
+                </div>
+                <div id="userbasecode" :style="{ height: chartBoxHeight }" class="tablecodeChart"></div>
+            </div>
+            <!--小组代码总量-->
+            <div>
+                <div class="block date-select">
+                    <span class="demonstration">时间：</span>
+                    <el-date-picker
+                            v-model="time.groupcodeTime"
+                            type="daterange"
+                            align="right"
+                            unlink-panels
+                            range-separator="至"
+                            start-placeholder="开始日期"
+                            end-placeholder="结束日期"
+                            value-format="yyyy-MM-dd"
+                            :picker-options="pickerOptions">
+                    </el-date-picker>
+                    <el-button icon="el-icon-search" @click="groupcodeSearch" circle></el-button>
+                </div>
+                <div id="groupbasecode" :style="{ height: chartBoxHeight }" class="tablecodeChart"></div>
+            </div>
+        </el-tab-pane>
+        <el-tab-pane label="基本数据管理" name="five">
+            <!--人员真实姓名-->
+            <div>
+                <el-table
+                        ref="singleTable"
+                        :data="users"
+                        height="540"
+                        highlight-current-row
+                        style="width: 567px">
+                    <el-table-column
+                            fixed
+                            prop="userName"
+                            label="姓名"
+                            width="150">
+                    </el-table-column>
+                    <el-table-column
+                            prop="userRealName"
+                            label="真实姓名"
+                            width="200">
+                        <template slot-scope="scope">
+                            <el-input v-model="scope.row.userRealName" autocomplete="off"></el-input>
+                        </template>
+                    </el-table-column>
+                    <el-table-column
+                            label="操作"
+                            width="100">
+                        <template slot-scope="scope">
+                            <el-button @click="editUserName(scope.row)" type="text" size="small">编辑保存</el-button>
+                        </template>
+                    </el-table-column>
+                </el-table>
+                <el-row>
+                    <el-button round v-for="item in groups" @click="editGroup(item.groupUsers,item.groupId)">
+                        {{item.groupName}}
+                    </el-button>
+                </el-row>
+            </div>
+        </el-tab-pane>
     </el-tabs>
+
+    <el-dialog title="校验身份" :visible.sync="dialogFormVisible">
+        <el-form :model="form">
+            <el-form-item label="账号" :label-width="formLabelWidth">
+                <el-input v-model="form.account" autocomplete="off"></el-input>
+            </el-form-item>
+            <el-form-item label="密码" :label-width="formLabelWidth">
+                <el-input v-model="form.password" autocomplete="off"></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="cancelLogin">取 消</el-button>
+            <el-button type="primary" @click="login">登录</el-button>
+        </div>
+    </el-dialog>
+
+    <el-dialog title="人员分组" :visible.sync="dialogGroup">
+        <el-transfer
+                v-model="groupValue"
+                :props="{
+                      key: 'value',
+                      label: 'desc'
+                    }"
+                :data="groupData">
+        </el-transfer>
+        <div slot="footer" class="dialog-footer">
+            <el-button @click="dialogGroup = false">取 消</el-button>
+            <el-button type="primary" @click="okGroup">保存</el-button>
+        </div>
+    </el-dialog>
 </div>
 </body>
 </html>
@@ -125,6 +277,33 @@
         el: '#app',
         data() {
             return {
+                pickerOptions: {
+                    shortcuts: [{
+                        text: '最近一周',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '最近一个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }, {
+                        text: '最近三个月',
+                        onClick(picker) {
+                            const end = new Date();
+                            const start = new Date();
+                            start.setTime(start.getTime() - 3600 * 1000 * 24 * 90);
+                            picker.$emit('pick', [start, end]);
+                        }
+                    }]
+                },
                 chartBoxHeight: '433px',
                 first: "third",
                 userIndex: 1,
@@ -134,13 +313,31 @@
                 commitSize: 20,
                 commits: [],
                 xLabelList: [],
-                usertimecodeTime: "",
-                grouptimecodeTime: "",
-                projecttimecodeTime: "",
+                time: {
+                    usertimecodeTime: "",
+                    grouptimecodeTime: "",
+                    projecttimecodeTime: "",
+                    commitTime: "",
+                    usercodeTime: "",
+                    groupcodeTime: ""
+                },
                 projectList: [],
                 form: {
-                    projectId: ""
-                }
+                    account: "",
+                    password: "",
+                    projectId: "",
+                    commit: {
+                        projectId: "",
+                        userName: ""
+                    }
+                },
+                dialogFormVisible: false,
+                groups: [],
+                noGroupUsers: [],
+                groupData: [],
+                groupValue: [],
+                groupId: "",
+                dialogGroup: false
             }
         },
         mounted: function () {
@@ -155,29 +352,88 @@
             //初始化人员代码量表格
             this.userBaseCodeList();
             //初始化小组提交记录列表
-            this.groupTimeCodeList(null,null,0,null);
+            this.groupTimeCodeList(null, null, 0);
+            //初始化小组代码量表格
+            this.groupBaseCodeList();
         },
         methods: {
+            cancelLogin() {
+                this.dialogFormVisible = false;
+                this.first = 'third';
+            },
+            login() {
+                axios({
+                    url: "/codex/user/login",
+                    params: {
+                        account: this.form.account,
+                        password: this.form.password
+                    }
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        //登录成功
+                        this.dialogFormVisible = false
+                        //初始化小组列表
+                        this.getGroupList();
+                        //初始化未分组人员列表
+                        this.getNoGroupUsers();
+                    } else {
+                        this.first = 'third';
+                        this.dialogFormVisible = false
+                        this.$message.error(data.message);
+                    }
+                })
+            },
+            cancelname() {
+                this.form.commit.userName = "";
+            },
+            toCommit(userName, projectId) {
+                this.form.commit.userName = userName;
+                this.form.commit.projectId = projectId;
+                this.getCommitList(userName, projectId);
+                this.first = "second";
+            },
             usertimecodeSearch() {
-                var date = this.usertimecodeTime;
-                this.userTimeCodeList(date[0], date[1], 0, null);
+                var date = this.time.usertimecodeTime;
+                this.userTimeCodeList(date != null ? date[0] : null, date != null ? date[1] : null, 0, null);
             },
             projecttimecodeSearch() {
-                var date = this.projecttimecodeTime;
-                this.userTimeCodeList(date[0], date[1], 1, this.form.projectId);
+                var date = this.time.projecttimecodeTime;
+                this.userTimeCodeList(date != null ? date[0] : null, date != null ? date[1] : null, 1, this.form.projectId);
             },
             grouptimecodeSearch() {
-                var date = this.grouptimecodeTime;
-                this.groupTimeCodeList(date[0], date[1], 1)
+                var date = this.time.grouptimecodeTime;
+                this.groupTimeCodeList(date != null ? date[0] : null, date != null ? date[1] : null, 0)
+            },
+            usercodeSearch() {
+                var date = this.time.usercodeTime;
+                this.userBaseCodeList(date != null ? date[0] : null, date != null ? date[1] : null);
+            },
+            commitSearch() {
+                var date = this.time.commitTime;
+                this.getCommitList(this.form.commit.userName, this.form.commit.projectId, date != null ? date[0] : null, date != null ? date[1] : null)
+            },
+            groupcodeSearch() {
+                var date = this.time.groupcodeTime;
+                this.groupBaseCodeList(date != null ? date[0] : null, date != null ? date[1] : null);
+            },
+            load() {
+                var type = this.first;
+                if (type === 'first') {
+                    this.loadUser();
+                }
+                if (type === 'second') {
+                    this.loadCommit();
+                }
             },
             loadUser() {
                 this.userSize = this.userSize + 10;
                 this.getUserList();
             },
             loadCommit() {
-                this.commitIndex = this.commitIndex + 10;
                 this.commitSize = this.commitSize + 10;
-                this.getCommitList();
+                var date = this.time.commitTime;
+                this.getCommitList(this.form.commit.userName, this.form.commit.projectId, date != null ? date[0] : null, date != null ? date[1] : null)
             },
             getProjectList() {
                 axios({
@@ -194,7 +450,9 @@
                 })
             },
             handleClick() {
-
+                if (this.first === 'five') {
+                    this.dialogFormVisible = true;
+                }
             },
             getUserList() {
                 axios({
@@ -212,14 +470,28 @@
                     }
                 })
             },
-            getCommitList(userName, projectId) {
+            getGroupList() {
+                axios({
+                    url: "/codex/group/groups"
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        this.groups = data.data;
+                    } else {
+                        this.$message.error("小组查询失败");
+                    }
+                })
+            },
+            getCommitList(userName, projectId, startDate, endDate) {
                 axios({
                     url: "/codex/commit/commitBy",
                     params: {
                         index: this.commitIndex,
                         size: this.commitSize,
                         committerName: userName,
-                        projectId: projectId
+                        projectId: projectId,
+                        startDate: startDate,
+                        endDate: endDate
                     }
                 }).then((res) => {
                     var data = res.data;
@@ -249,10 +521,10 @@
                     }
                 })
             },
-            groupTimeCodeList(startDate, endDate, type, projectId) {
+            groupTimeCodeList(startDate, endDate, type) {
                 axios({
                     url: "/codex/statistics/groupTimeCode",
-                    params: {"startDate": startDate, "endDate": endDate, "projectId": projectId}
+                    params: {"startDate": startDate, "endDate": endDate}
                 }).then((res) => {
                     var data = res.data;
                     if (data.status) {
@@ -268,16 +540,29 @@
                     }
                 })
             },
-            userBaseCodeList() {
+            userBaseCodeList(startDate, endDate) {
                 axios({
-                    url: "/codex/statistics/userbasecode"
+                    url: "/codex/statistics/userbasecode",
+                    params: {startDate: startDate, endDate: endDate}
                 }).then((res) => {
                     var data = res.data;
                     if (data.status) {
-                        console.log(data)
-                        this.getTableChart(userbasecode, data.data);
+                        this.getTableChart('userbasecode', data.data);
                     } else {
-                        this.$message.error("人员时间提交查询失败");
+                        this.$message.error("人员代码量查询失败");
+                    }
+                })
+            },
+            groupBaseCodeList(startDate, endDate) {
+                axios({
+                    url: "/codex/statistics/groupbasecode",
+                    params: {startDate: startDate, endDate, endDate}
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        this.getTableChart('groupbasecode', data.data);
+                    } else {
+                        this.$message.error("小组代码量查询失败");
                     }
                 })
             },
@@ -290,7 +575,7 @@
                         text: data.title
                     },
                     subtitle: {
-                        text: '数据截止' + new Date().toDateString()
+                        text: '数据截止`' + data.date
                     },
                     xAxis: {
                         type: 'category',
@@ -326,7 +611,12 @@
             getTimeChart(id, data) {
                 var series = data.series;
                 series.map((t) => {
-                    t.color = '#' + (Math.random() * 0xffffff << 0).toString(16);
+                    //赋予随机颜色
+                    var R = Math.floor(Math.random() * 255);
+                    var G = Math.floor(Math.random() * 255);
+                    var B = Math.floor(Math.random() * 255);
+                    t.color = 'rgb(' + R + ',' + G + ',' + B + ')';
+                    // t.color = '#' + (Math.random() * 0xffffff << 0).toString(16);
                 })
                 var chart = Highcharts.chart(id, {
                     // 图表 设置默认直线
@@ -356,7 +646,7 @@
                     },
                     // 导出功能
                     exporting: {
-                        enabled: false,
+                        enabled: data.ifImport
                     },
                     // 版权
                     credits: {
@@ -397,6 +687,68 @@
                     // 系列（数据）
                     series: data.series,
                 });
+            },
+            editUserName(row) {
+                axios({
+                    url: "/codex/user/save",
+                    params: {userName: row.userName, userRealName: row.userRealName}
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        this.$message.success("保存成功");
+                    } else {
+                        this.$message.error("保存失败");
+                    }
+                })
+
+            },
+            editGroup(groupUsers, groupId) {
+                var data = [];
+                this.noGroupUsers.map((t) => {
+                    data.push({
+                        value: t.userName,
+                        desc: t.userName
+                    })
+                });
+                var value = [];
+                groupUsers.map((t) => {
+                    value.push(t.userName);
+                })
+                this.groupValue = value;
+                this.groupData = data;
+                this.dialogGroup = true;
+                this.groupId = groupId;
+            },
+            okGroup() {
+                axios({
+                    url: "/codex/group/saveGroupUser",
+                    method: "POST",
+                    data: {
+                        groupId: this.groupId,
+                        userNames: this.groupValue
+                    }
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        this.dialogGroup = false;
+                        this.$message.success("修改成功");
+                        this.getNoGroupUsers();
+                    } else {
+                        this.$message.error("修改分组失败");
+                    }
+                })
+            },
+            getNoGroupUsers() {
+                axios({
+                    url: "/codex/group/noGroupUsers"
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        this.noGroupUsers = data.data;
+                    } else {
+                        this.$message.error("未分组人员查询失败");
+                    }
+                })
             }
         }
     })
@@ -407,5 +759,17 @@
         width: 90%;
         padding: 15px;
         margin: 3px;
+    }
+
+    .box-card {
+        margin-bottom: 9px;
+    }
+
+    .box-card:hover {
+        background: rgba(184, 219, 219, 0.5);
+    }
+
+    .date-select {
+        /*margin-left: 100px;*/
     }
 </style>
