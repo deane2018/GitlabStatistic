@@ -15,6 +15,7 @@ import com.leyunone.codex.model.vo.ChartVO;
 import com.leyunone.codex.model.vo.CommitVO;
 import com.leyunone.codex.model.vo.GroupUserVO;
 import com.leyunone.codex.model.vo.UserVO;
+import com.leyunone.codex.util.UserNameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -44,18 +45,22 @@ public class StatisticsService {
         ChartVO chartVO = new ChartVO();
 
         List<UserVO> users = null;
-        if(StringUtils.isBlank(codeTimeQuery.getStartDate())){
+        if (StringUtils.isBlank(codeTimeQuery.getStartDate())) {
             //未入时间，则截止至今
             users = userDao.selectByConOrder(null, UserVO.class, 1, User::getCodeTotal);
             chartVO.setDate(LocalDateTime.now().format(format));
-        }else{
-            users = commitDao.selectSumGroupUser(codeTimeQuery.getStartDate(),codeTimeQuery.getEndDate());
+        } else {
+            users = commitDao.selectSumGroupUser(codeTimeQuery.getStartDate(), codeTimeQuery.getEndDate());
             chartVO.setDate(codeTimeQuery.getEndDate());
         }
         Object[][] datas = new Object[users.size()][2];
         for (int i = 0; i < users.size(); i++) {
             UserVO userVO = users.get(i);
-            datas[i][0] = userVO.getUserName();
+            if (StringUtils.isNotBlank(userVO.getUserRealName())) {
+                datas[i][0] = userVO.getUserRealName();
+            } else {
+                datas[i][0] = userVO.getUserName();
+            }
             datas[i][1] = userVO.getCodeTotal();
         }
         chartVO.setSeriesData(datas);
@@ -69,16 +74,16 @@ public class StatisticsService {
     public ChartVO groupBaseCode(CodeTimeQuery codeTimeQuery) {
         ChartVO chartVO = new ChartVO();
         List<GroupUserVO> groupUserVOS = null;
-        if(StringUtils.isBlank(codeTimeQuery.getStartDate())){
+        if (StringUtils.isBlank(codeTimeQuery.getStartDate())) {
             //未入时间，则截止至今
             groupUserVOS = groupUserDao.selectCodeByGroup();
             chartVO.setDate(LocalDateTime.now().format(format));
-        }else{
-            groupUserVOS = groupUserDao.selectCodeSumByGroup(codeTimeQuery.getStartDate(),codeTimeQuery.getEndDate());
+        } else {
+            groupUserVOS = groupUserDao.selectCodeSumByGroup(codeTimeQuery.getStartDate(), codeTimeQuery.getEndDate());
             chartVO.setDate(codeTimeQuery.getEndDate());
         }
 
-        Collections.sort(groupUserVOS,Comparator.comparing(GroupUserVO::getCodeTotal));
+        groupUserVOS.sort(Comparator.comparing(GroupUserVO::getCodeTotal));
         Object[][] datas = new Object[groupUserVOS.size()][2];
         for (int i = 0; i < groupUserVOS.size(); i++) {
             GroupUserVO groupUserVO = groupUserVOS.get(i);
@@ -92,6 +97,7 @@ public class StatisticsService {
 
     /**
      * 统计 小组随时间
+     *
      * @param codeTimeQuery
      * @return
      */
@@ -103,14 +109,27 @@ public class StatisticsService {
         List<GroupUserVO> groupUserVOS = groupUserDao.groupTimeCode(codeTimeQuery);
 
         //解析页面可用的chart对象 日期 -》 提交人集合
-        Map<String, List<GroupUserVO>> datamap = groupUserVOS.stream().collect(Collectors.groupingBy(GroupUserVO::getDate));
+        Map<String, List<GroupUserVO>> datamap = new HashMap<>();
+        Set<String> setX = new LinkedHashSet<>();
+        Set<String> names = new LinkedHashSet<>();
+        for(GroupUserVO groupUserVO : groupUserVOS){
+            String date = groupUserVO.getDate();
+            if(datamap.containsKey(date)){
+                datamap.get(date).add(groupUserVO);
+            }else{
+                ArrayList<GroupUserVO> l = CollectionUtil.newArrayList();
+                l.add(groupUserVO);
+                datamap.put(date,l);
+            }
+            //X坐标
+            setX.add(date);
+            if(StringUtils.isNotBlank(groupUserVO.getGroupName())){
+                //提交人
+                names.add(groupUserVO.getGroupName());
+            }
+        }
 
-        //X坐标
-        Set<String> setX = groupUserVOS.stream().map(GroupUserVO::getDate).collect(Collectors.toSet());
-        Collections.sort(new ArrayList<>(setX));
-        //提交人
-        Set<String> names = groupUserVOS.stream().filter((t) -> StringUtils.isNotBlank(t.getGroupName())).map(GroupUserVO::getGroupName).collect(Collectors.toSet());
-        if(CollectionUtil.isEmpty(names)){
+        if (CollectionUtil.isEmpty(names)) {
             names = groupDao.selectByCon(null).stream().map(Group::getGroupName).collect(Collectors.toSet());
         }
         Map<String, List<Integer>> nameDate = new HashMap<>();
@@ -128,7 +147,9 @@ public class StatisticsService {
                 //找到每个提交的对应人员
                 for (GroupUserVO groupUserVO : groupUsers) {
                     List<Integer> integers = nameDate.get(groupUserVO.getGroupName());
-                    integers.add(groupUserVO.getTotal());
+                    if (CollectionUtil.isNotEmpty(integers)) {
+                        integers.add(groupUserVO.getTotal());
+                    }
                 }
             }
         }
@@ -154,32 +175,45 @@ public class StatisticsService {
      * @return
      */
     public ChartVO userProjectTimeCode(CodeTimeQuery codeTimeQuery) {
-        if(StringUtils.isBlank(codeTimeQuery.getStartDate())){
+        if (StringUtils.isBlank(codeTimeQuery.getStartDate())) {
             String statisticsDate = StatisticsTypeEnum.getStatisticsType(0).getStatisticsDate();
             codeTimeQuery.setStartDate(statisticsDate);
         }
-        if(StringUtils.isBlank(codeTimeQuery.getEndDate())){
+        if (StringUtils.isBlank(codeTimeQuery.getEndDate())) {
             String endDate = this.format.format(LocalDateTime.now());
             codeTimeQuery.setEndDate(endDate);
         }
 
         List<CommitVO> commitVOS = commitDao.selectProjectCodeGroupUser(codeTimeQuery);
-        //解析页面可用的chart对象
-        Map<String, ChartBean> maps = new HashMap<>();
-        //日期 -》 提交人集合
-        Map<String, List<CommitVO>> datamap = commitVOS.stream().collect(Collectors.groupingBy(CommitVO::getDate));
 
-        //X坐标
-        Set<String> setX = commitVOS.stream().map(CommitVO::getDate).collect(Collectors.toSet());
-        Collections.sort(new ArrayList<>(setX));
-        //提交人
-        Set<String> names = commitVOS.stream().filter((t)-> StringUtils.isNotBlank(t.getCommitterName())).map(CommitVO::getCommitterName).collect(Collectors.toSet());
-        if(CollectionUtil.isEmpty(names)){
+        //解析页面可用的chart对象 日期 -》 提交人集合
+        Map<String, List<CommitVO>> datamap = new HashMap<>();
+        Set<String> setX = new LinkedHashSet<>();
+        Set<String> names = new LinkedHashSet<>();
+        for(CommitVO commitVO : commitVOS){
+            String date = commitVO.getDate();
+            if(datamap.containsKey(date)){
+                datamap.get(date).add(commitVO);
+            }else{
+                ArrayList<CommitVO> l = CollectionUtil.newArrayList();
+                l.add(commitVO);
+                datamap.put(date,l);
+            }
+            //X坐标
+            setX.add(date);
+            if(StringUtils.isNotBlank(commitVO.getCommitterName())){
+                //提交人
+                names.add(commitVO.getCommitterName());
+            }
+        }
+
+        if (CollectionUtil.isEmpty(names)) {
             names = userDao.selectByCon(null).stream().map(User::getUserName).collect(Collectors.toSet());
         }
         Map<String, List<Integer>> nameDate = new HashMap<>();
         names.forEach((t) -> nameDate.put(t, new ArrayList<>()));
 
+        Map<String, String> userNames = UserNameUtils.getUserRealNames();
         for (String date : setX) {
             List<CommitVO> commits = datamap.get(date);
             if (StringUtils.isBlank(CollectionUtil.getFirst(commits).getCommitterName())) {
@@ -203,6 +237,9 @@ public class StatisticsService {
         for (String name : nameDate.keySet()) {
             ChartBean chartBean = new ChartBean();
             chartBean.setData(nameDate.get(name));
+            if (userNames.containsKey(name)) {
+                name = userNames.get(name);
+            }
             chartBean.setName(name);
 
             series.add(chartBean);
@@ -212,7 +249,7 @@ public class StatisticsService {
         return chartVO;
     }
 
-    private void reloadTime(CodeTimeQuery codeTimeQuery){
+    private void reloadTime(CodeTimeQuery codeTimeQuery) {
         if (StringUtils.isBlank(codeTimeQuery.getStartDate())) {
             String statisticsDate = StatisticsTypeEnum.getStatisticsType(0).getStatisticsDate();
             codeTimeQuery.setStartDate(statisticsDate);

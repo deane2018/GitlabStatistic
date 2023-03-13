@@ -17,7 +17,7 @@ public class Branches {
     @TableId("id")
     private String id;
 
-    private Integer projectId;
+    private String projectId;
 
     private String branchesName;
 }

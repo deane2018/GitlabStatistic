@@ -1,6 +1,4 @@
 server:
-  servlet:
-    context-path: /codex
   port: 7878
 spring:
   application:
@@ -34,18 +32,15 @@ spring:
 xxl:
   job:
     admin:
-      addresses: http://81.68.137.33:9991/xxl-job-admin
+      addresses: http://127.0.0.1:9991/xxl-job-admin
     accessToken:
     executor:
-      appname: codex
+      appname: leyunone-codex
       address:
       ip:
       port: 9997
       logpath:
       logretentiondays: 30
-gitlab:
-  token:
-  url:
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl

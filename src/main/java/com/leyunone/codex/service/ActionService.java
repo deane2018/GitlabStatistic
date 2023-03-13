@@ -2,16 +2,16 @@ package com.leyunone.codex.service;
 
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.leyunone.codex.dao.*;
 import com.leyunone.codex.dao.entry.*;
 import com.leyunone.codex.model.bo.GroupBO;
 import com.leyunone.codex.model.bo.UserBO;
 import com.leyunone.codex.model.query.CommitQuery;
-import com.leyunone.codex.model.vo.GroupUserVO;
-import com.leyunone.codex.model.vo.GroupVO;
-import com.leyunone.codex.model.vo.ProjectVO;
-import com.leyunone.codex.model.vo.UserVO;
+import com.leyunone.codex.model.vo.*;
+import com.leyunone.codex.util.UserNameUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,6 +19,9 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * 操作行为服务
+ */
 @Service
 public class ActionService {
 
@@ -41,7 +44,7 @@ public class ActionService {
         List<ProjectUser> projectUsers = projectUserDao.selectByCon(null);
         Map<String, List<ProjectUser>> projectMap = projectUsers.stream().collect(Collectors.groupingBy(ProjectUser::getUserName));
         List<Project> projects = projectDao.selectByCon(null);
-        Map<Integer, Project> projectName = projects.stream().collect(Collectors.toMap(Project::getId, Function.identity()));
+        Map<String, Project> projectName = projects.stream().collect(Collectors.toMap(Project::getProjectId, Function.identity()));
 
         List<UserVO> us = new ArrayList<>();
         for (User user : users) {
@@ -65,6 +68,13 @@ public class ActionService {
 
     public Page<Commit> queryCommitCodeX(CommitQuery query) {
         Page<Commit> commitPage = commitDao.selectByPage(query);
+        Map<String, String> userRealNames = UserNameUtils.getUserRealNames();
+        List<Commit> records = commitPage.getRecords();
+        records.forEach((t) -> {
+            if (userRealNames.containsKey(t.getCommitterName())) {
+                t.setCommitterName(userRealNames.get(t.getCommitterName()));
+            }
+        });
         return commitPage;
     }
 
@@ -84,33 +94,63 @@ public class ActionService {
         return groups;
     }
 
-    public List<UserVO> noGroups(){
-        List<GroupUser> groupUsers = groupUserDao.selectByCon(null);
-        List<UserVO> users = userDao.selectByCon(null,UserVO.class);
+    public List<String> noGroupUsers(Integer groupId) {
+        //查询groupId的人员 和没有分组的人员
+        List<GroupUserVO> groupUserVOS = groupUserDao.selectGroupUser();
 
-        Set<String> groupUser = groupUsers.stream().map(GroupUser::getUserName).collect(Collectors.toSet());
-        Iterator<UserVO> iterator = users.iterator();
-        while(iterator.hasNext()){
-            if(groupUser.contains(iterator.next().getUserName())) iterator.remove();
+        groupUserVOS.removeIf(next -> ObjectUtil.isNotNull(next.getGroupId()) && !next.getGroupId().equals(groupId));
+        List<String> result = null;
+        if (CollectionUtil.isNotEmpty(groupUserVOS)) {
+            result = groupUserVOS.stream().map(GroupUserVO::getUserName).collect(Collectors.toList());
         }
-        return users;
+        return result;
     }
 
     /**
      * 不使用事务
+     *
      * @param groupBO
      */
-    public void saveGroupUser(GroupBO groupBO){
+    public void saveGroupUser(GroupBO groupBO) {
         //将关系全删除
         int i = groupUserDao.deleteByGroupId(groupBO.getGroupId());
 
         //重新添加关系
         List<GroupUser> gu = new ArrayList<>();
-        for(String userName : groupBO.getUserNames()){
+        for (String userName : groupBO.getUserNames()) {
             gu.add(GroupUser.builder().userName(userName).groupId(groupBO.getGroupId()).build());
         }
         boolean b = groupUserDao.insertOrUpdateBatch(gu);
-        if(!b) throw new RuntimeException();
+        if (!b) throw new RuntimeException();
+    }
+
+
+    /**
+     * 选择项目，得到项目下人员；
+     * 选择人员，得到人员有的项目；
+     *
+     * @param projectId
+     * @param userName
+     */
+    public List<ProjectUserVO> selectProjectOrUser(Integer projectId, String userName, Integer type) {
+        List<ProjectUserVO> projectUserVOS = new ArrayList<>();
+        if (type == 0) {
+            //人员搜索
+            if(ObjectUtil.isNull(projectId)){
+                projectUserVOS = userDao.selectByCon(null, ProjectUserVO.class);
+            }else{
+                projectUserVOS = userDao.selectByProjectId(projectId);
+            }
+        }
+        if (type == 1) {
+            //项目搜索
+            if(StringUtils.isBlank(userName)){
+                projectUserVOS = projectDao.selectByCon(null,ProjectUserVO.class);
+            }else{
+                projectUserVOS = projectDao.selectByUserName(userName);
+            }
+        }
+        return projectUserVOS;
     }
 }
 

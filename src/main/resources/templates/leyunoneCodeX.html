@@ -7,13 +7,12 @@
     <script th:src="@{js/vue.js}" type="application/javascript"></script>
     <script th:src="@{js/exporting.js}" type="application/javascript"></script>
     <script src="https://code.hcharts.cn/plugins/zh_cn.js" type="application/javascript"></script>
-    <!--    <script src="./js/vue.js" type="application/javascript"></script>-->
     <!-- 引入样式 -->
-    <link rel="stylesheet" th:href="@{/element/theme/index.css}"/>
-    <!--    <link rel="stylesheet" href="./element/theme/index.css"/>-->
+    <!--    <link rel="stylesheet" th:href="@{/element/theme/index.css}"/>-->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
     <!-- 引入组件库 -->
-    <script th:src="@{/element/index.js}" type="application/javascript"></script>
-    <!--    <script src="./element/index.js" type="application/javascript"></script>-->
+    <!--    <script th:src="@{/element/index.js}" type="application/javascript"></script>-->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
 
     <script src="./js/axios.js"></script>
 
@@ -22,12 +21,12 @@
 <div id="app" style="width: 80%;margin-left: 200px;height: 100%;">
     <el-tabs v-model="first" @tab-click="handleClick">
         <el-tab-pane label="成员Code" name="first">
-            <div style="margin-top: 17px;overflow:auto;height: 1500px" v-infinite-scroll="load">
+            <div style="margin-top: 17px;height: 100%">
                 <el-collapse accordion>
                     <el-collapse-item v-for="(item,index) in users">
                         <template slot="title">
                             <span style="margin-left: 50px">
-                                {{item.userName}}<i class="el-icon-user"></i>
+                                {{item.userName}}/{{item.userRealName}}<i class="el-icon-user"></i>
                             </span>
                             <span style="float: right;text-align: center; margin-left: 110px; width: 600px;">
                                 <span style="color: red">删除总量：{{item.codeDeletions}}</span>
@@ -37,8 +36,8 @@
                                 <span style="color: orange">总量：{{item.codeTotal}}</span>
                             </span>
                         </template>
-                        <el-button class="btn-cell" v-for="po in item.projectList"
-                                   @click="toCommit(item.userName,po.id)"
+                        <el-button class="btn-cell" v-for="(po,index) in item.projectList"
+                                   @click="toCommit(item.userName,po.projectId)"
                         >
                             {{po.projectName}}
                         </el-button>
@@ -47,7 +46,7 @@
             </div>
         </el-tab-pane>
         <el-tab-pane label="提交历史" name="second">
-            <div class="block date-select">
+            <el-form :inline="true" :model="form" class="demo-form-inline">
                 <span class="demonstration">时间：</span>
                 <el-date-picker
                         v-model="time.commitTime"
@@ -61,20 +60,33 @@
                         :picker-options="pickerOptions">
                 </el-date-picker>
                 <span class="demonstration">项目：</span>
-                <el-select clearable v-model="form.commit.projectId" placeholder="请选择">
+                <el-select clearable filterable v-model="form.commit.projectId" ref="selectProjectRef"
+                           @focus="projectUserOption(1)" placeholder="请选择">
                     <el-option
-                            v-for="item in projectList"
-                            :key="item.id"
+                            v-for="item in form.commit.projectList"
+                            :key="item.projectId"
                             :label="item.projectName"
-                            :value="item.id">
+                            :value="item.projectId">
+                    </el-option>
+                </el-select>
+                <span class="demonstration">人员：</span>
+                <el-select clearable filterable v-model="form.commit.userName" ref="selectUserRef"
+                           @change="getCommitList(form.commit.userName,form.commit.projectId)"
+                           @focus="projectUserOption(0)"
+                           placeholder="请选择">
+                    <el-option
+                            v-for="item in form.commit.userList"
+                            :key="item.userName"
+                            :label="item.userName"
+                            :value="item.userName">
                     </el-option>
                 </el-select>
                 <el-button icon="el-icon-search" @click="commitSearch" circle></el-button>
 
                 <span class="demonstration">当前人员：{{form.commit.userName}}</span>
                 <el-button type="danger" @click="cancelname" icon="el-icon-delete" circle></el-button>
-            </div>
-            <div style="margin-top: 17px;overflow:auto;height: 1500px" v-infinite-scroll="load">
+            </el-form>
+            <div style="margin-top: 17px;height: 100%">
                 <el-card class="box-card" v-for="(commit,index) in commits">
                     <span>{{commit.id}} &nbsp; &nbsp; by {{commit.committerName}}</span>
                     <br/>
@@ -129,9 +141,9 @@
                         <el-select clearable v-model="form.projectId" placeholder="请选择">
                             <el-option
                                     v-for="item in projectList"
-                                    :key="item.id"
+                                    :key="item.projectId"
                                     :label="item.projectName"
-                                    :value="item.id">
+                                    :value="item.projectId">
                             </el-option>
                         </el-select>
 
@@ -204,11 +216,10 @@
             <!--人员真实姓名-->
             <div>
                 <el-table
-                        ref="singleTable"
                         :data="users"
                         height="540"
                         highlight-current-row
-                        style="width: 567px">
+                        style="width: 100%">
                     <el-table-column
                             fixed
                             prop="userName"
@@ -231,6 +242,7 @@
                         </template>
                     </el-table-column>
                 </el-table>
+                <span>人员分组：</span>
                 <el-row>
                     <el-button round v-for="item in groups" @click="editGroup(item.groupUsers,item.groupId)">
                         {{item.groupName}}
@@ -239,7 +251,6 @@
             </div>
         </el-tab-pane>
     </el-tabs>
-
     <el-dialog title="校验身份" :visible.sync="dialogFormVisible">
         <el-form :model="form">
             <el-form-item label="账号" :label-width="formLabelWidth">
@@ -254,10 +265,8 @@
             <el-button type="primary" @click="login">登录</el-button>
         </div>
     </el-dialog>
-
     <el-dialog title="人员分组" :visible.sync="dialogGroup">
         <el-transfer
-                style="margin-left: 160px"
                 v-model="groupValue"
                 :props="{
                       key: 'value',
@@ -278,6 +287,7 @@
         el: '#app',
         data() {
             return {
+                formLabelWidth: "",
                 pickerOptions: {
                     shortcuts: [{
                         text: '最近一周',
@@ -308,10 +318,10 @@
                 chartBoxHeight: '433px',
                 first: "third",
                 userIndex: 1,
-                userSize: 20,
+                userSize: 300,
                 users: [],
                 commitIndex: 1,
-                commitSize: 20,
+                commitSize: 300,
                 commits: [],
                 xLabelList: [],
                 time: {
@@ -329,12 +339,13 @@
                     projectId: "",
                     commit: {
                         projectId: "",
-                        userName: ""
+                        userName: "",
+                        projectList: [],
+                        userList: []
                     }
                 },
                 dialogFormVisible: false,
                 groups: [],
-                noGroupUsers: [],
                 groupData: [],
                 groupValue: [],
                 groupId: "",
@@ -342,29 +353,42 @@
             }
         },
         mounted: function () {
-            //初始用户列表
-            this.getUserList();
-            //初始提交记录列表
-            this.getCommitList();
             //初始人员提交表格
             this.userTimeCodeList(null, null, 0, null);
             //初始项目提交表格
             this.getProjectList();
-            //初始化人员代码量表格
-            this.userBaseCodeList();
             //初始化小组提交记录列表
             this.groupTimeCodeList(null, null, 0);
-            //初始化小组代码量表格
-            this.groupBaseCodeList();
+
+            // window.addEventListener("scroll", this.loadList, true);
         },
         methods: {
+            projectUserOption(type) {
+                //type : 0人员搜索  1项目搜索
+                axios({
+                    url: "/user/selectuserproject",
+                    params: {type: type, userName: this.form.commit.userName, projectId: this.form.commit.projectId}
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        if (type === 0) {
+                            this.form.commit.userList = data.data;
+                        }
+                        if (type === 1) {
+                            this.form.commit.projectList = data.data;
+                        }
+                    } else {
+                        this.$message.error(data.message);
+                    }
+                })
+            },
             cancelLogin() {
                 this.dialogFormVisible = false;
                 this.first = 'third';
             },
             login() {
                 axios({
-                    url: "/codex/user/login",
+                    url: "/user/login",
                     params: {
                         account: this.form.account,
                         password: this.form.password
@@ -376,8 +400,8 @@
                         this.dialogFormVisible = false
                         //初始化小组列表
                         this.getGroupList();
-                        //初始化未分组人员列表
-                        this.getNoGroupUsers();
+                        //初始化人员列表
+                        this.getUserList();
                     } else {
                         this.first = 'third';
                         this.dialogFormVisible = false
@@ -418,13 +442,25 @@
                 var date = this.time.groupcodeTime;
                 this.groupBaseCodeList(date != null ? date[0] : null, date != null ? date[1] : null);
             },
-            load() {
+            loadList(e) {
+                console.log(e)
+                //变量scrollTop是滚动条滚动时，距离顶部的距离
+                var scrollTop = e.target.scrollTop;
+                //变量windowHeight是可视区的高度
+                var windowHeight = e.target.clientHeight;
+                //变量scrollHeight是滚动条的总高度
+                var scrollHeight = e.target.scrollHeight;
+                //滚动条到底部的条件
                 var type = this.first;
-                if (type === 'first') {
-                    this.loadUser();
-                }
-                if (type === 'second') {
-                    this.loadCommit();
+                console.log(scrollTop + "=" + windowHeight + "=" + scrollHeight);
+                if (scrollTop + windowHeight === scrollHeight) {
+                    console.log('到底啦');
+                    if (type === 'first') {
+                        this.loadUser();
+                    }
+                    if (type === 'second') {
+                        this.loadCommit();
+                    }
                 }
             },
             loadUser() {
@@ -438,26 +474,48 @@
             },
             getProjectList() {
                 axios({
-                    url: "/codex/project/projects"
+                    url: "/project/projects"
                 }).then((res) => {
                     var data = res.data;
                     if (data.status) {
                         this.projectList = data.data;
-                        this.form.projectId = this.projectList[0].id;
-                        this.userTimeCodeList(null, null, 1, this.projectList[0].id);
+                        this.form.projectId = this.projectList[0].projectId;
+                        this.userTimeCodeList(null, null, 1, this.projectList[0].projectId);
                     } else {
                         this.$message.error("项目列表查询失败");
                     }
                 })
             },
             handleClick() {
+                if (this.first === 'first') {
+                    //初始用户列表
+                    this.getUserList();
+                }
+                if (this.first === 'second') {
+                    //初始提交记录列表
+                    this.getCommitList();
+                }
+                if (this.first === 'third') {
+                    //初始人员提交表格
+                    this.userTimeCodeList(null, null, 0, null);
+                    //初始项目提交表格
+                    this.getProjectList();
+                    //初始化小组提交记录列表
+                    this.groupTimeCodeList(null, null, 0);
+                }
+                if (this.first === 'four') {
+                    //初始化人员代码量表格
+                    this.userBaseCodeList();
+                    //初始化小组代码量表格
+                    this.groupBaseCodeList();
+                }
                 if (this.first === 'five') {
                     this.dialogFormVisible = true;
                 }
             },
             getUserList() {
                 axios({
-                    url: "/codex/user/alluser",
+                    url: "/user/alluser",
                     params: {
                         index: this.userIndex,
                         size: this.userSize
@@ -473,7 +531,7 @@
             },
             getGroupList() {
                 axios({
-                    url: "/codex/group/groups"
+                    url: "/group/groups"
                 }).then((res) => {
                     var data = res.data;
                     if (data.status) {
@@ -485,7 +543,7 @@
             },
             getCommitList(userName, projectId, startDate, endDate) {
                 axios({
-                    url: "/codex/commit/commitBy",
+                    url: "/commit/commitBy",
                     params: {
                         index: this.commitIndex,
                         size: this.commitSize,
@@ -505,7 +563,7 @@
             },
             userTimeCodeList(startDate, endDate, type, projectId) {
                 axios({
-                    url: "/codex/statistics/userProjectTimeCode",
+                    url: "/statistics/userProjectTimeCode",
                     params: {"startDate": startDate, "endDate": endDate, "projectId": projectId}
                 }).then((res) => {
                     var data = res.data;
@@ -524,7 +582,7 @@
             },
             groupTimeCodeList(startDate, endDate, type) {
                 axios({
-                    url: "/codex/statistics/groupTimeCode",
+                    url: "/statistics/groupTimeCode",
                     params: {"startDate": startDate, "endDate": endDate}
                 }).then((res) => {
                     var data = res.data;
@@ -543,7 +601,7 @@
             },
             userBaseCodeList(startDate, endDate) {
                 axios({
-                    url: "/codex/statistics/userbasecode",
+                    url: "/statistics/userbasecode",
                     params: {startDate: startDate, endDate: endDate}
                 }).then((res) => {
                     var data = res.data;
@@ -556,7 +614,7 @@
             },
             groupBaseCodeList(startDate, endDate) {
                 axios({
-                    url: "/codex/statistics/groupbasecode",
+                    url: "/statistics/groupbasecode",
                     params: {startDate: startDate, endDate, endDate}
                 }).then((res) => {
                     var data = res.data;
@@ -691,7 +749,7 @@
             },
             editUserName(row) {
                 axios({
-                    url: "/codex/user/save",
+                    url: "/user/save",
                     params: {userName: row.userName, userRealName: row.userRealName}
                 }).then((res) => {
                     var data = res.data;
@@ -704,30 +762,40 @@
 
             },
             editGroup(groupUsers, groupId) {
-                var data = [];
-                if (this.noGroupUsers != null) {
-                    this.noGroupUsers.map((t) => {
-                        data.push({
-                            value: t.userName,
-                            desc: t.userName
+                axios({
+                    url: "/group/noGroupUsers",
+                    params: {groupId: groupId}
+                }).then((res) => {
+                    var data = res.data;
+                    if (data.status) {
+                        var groupUserData = data.data;
+                        var datap = [];
+                        //初始化未分组人员列表
+                        groupUserData.forEach((item, index) => {
+                            datap.push({
+                                value: item,
+                                desc: item
+                            })
                         })
-                    });
-                }
-                var value = [];
-                if (groupUsers != null) {
-                    groupUsers.map((t) => {
-                        value.push(t.userName);
-                    })
-                }
 
-                this.groupData = data;
-                this.dialogGroup = true;
-                this.groupValue = value;
-                this.groupId = groupId;
+                        var value = [];
+                        if (groupUsers != null) {
+                            groupUsers.map((t) => {
+                                value.push(t.userName);
+                            })
+                        }
+                        this.groupValue = value;
+                        this.groupData = datap;
+                        this.dialogGroup = true;
+                        this.groupId = groupId;
+                    } else {
+                        this.$message.error("未分组人员查询失败");
+                    }
+                })
             },
             okGroup() {
                 axios({
-                    url: "/codex/group/saveGroupUser",
+                    url: "/group/saveGroupUser",
                     method: "POST",
                     data: {
                         groupId: this.groupId,
@@ -738,22 +806,9 @@
                     if (data.status) {
                         this.dialogGroup = false;
                         this.$message.success("修改成功");
-                        this.getNoGroupUsers();
                         this.getGroupList();
                     } else {
                         this.$message.error("修改分组失败");
-                    }
-                })
-            },
-            getNoGroupUsers() {
-                axios({
-                    url: "/codex/group/noGroupUsers"
-                }).then((res) => {
-                    var data = res.data;
-                    if (data.status) {
-                        this.noGroupUsers = data.data;
-                    } else {
-                        this.$message.error("未分组人员查询失败");
                     }
                 })
             }

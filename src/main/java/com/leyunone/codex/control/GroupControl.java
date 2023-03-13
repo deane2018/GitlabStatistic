@@ -3,7 +3,6 @@ package com.leyunone.codex.control;
 import com.leyunone.codex.model.DataResponse;
 import com.leyunone.codex.model.bo.GroupBO;
 import com.leyunone.codex.model.vo.GroupVO;
-import com.leyunone.codex.model.vo.UserVO;
 import com.leyunone.codex.service.ActionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -27,8 +26,8 @@ public class GroupControl {
     }
 
     @RequestMapping("/noGroupUsers")
-    public DataResponse noGroupUsers(){
-        List<UserVO> userVOS = actionService.noGroups();
+    public DataResponse noGroupUsers(Integer groupId){
+        List<String> userVOS = actionService.noGroupUsers(groupId);
         return DataResponse.of(userVOS);
     }
 

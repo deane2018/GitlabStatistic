@@ -2,6 +2,7 @@ package com.leyunone.codex.control;
 
 import com.leyunone.codex.model.DataResponse;
 import com.leyunone.codex.model.bo.UserBO;
+import com.leyunone.codex.model.vo.ProjectUserVO;
 import com.leyunone.codex.model.vo.UserVO;
 import com.leyunone.codex.service.ActionService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,17 +27,23 @@ public class UserControl {
     @RequestMapping("/login")
     public DataResponse login(String account, String password) {
         //TODO 登录调试
-//        if(account.equals("leyunone") && password.equals("admin")){
+        if(account.equals("leyunone") && password.equals("admin")){
             return DataResponse.buildSuccess();
-//        }else{
-//            return DataResponse.buildFailure("账号或密码错误");
-//        }
+        }else{
+            return DataResponse.buildFailure("账号或密码错误");
+        }
     }
 
     @RequestMapping("/save")
     public DataResponse save(UserBO userBO){
         actionService.saveUser(userBO);
         return DataResponse.buildSuccess();
+    }
+
+    @RequestMapping("/selectuserproject")
+    public DataResponse selectProjectOrUser(Integer projectId,String userName,Integer type){
+        List<ProjectUserVO> projectUserVOS = actionService.selectProjectOrUser(projectId, userName, type);
+        return DataResponse.of(projectUserVOS);
     }
 
 }

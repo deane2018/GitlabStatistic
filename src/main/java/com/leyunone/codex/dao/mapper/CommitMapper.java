@@ -13,13 +13,13 @@ import java.util.List;
 
 public interface CommitMapper extends BaseMapper<Commit> {
 
-    void batchInsert(List<CommitBO> commits);
+    void batchInsert(@Param("commits") List<CommitBO> commits);
 
-    Date selectLastDate();
+    Date selectLastDate(String url);
 
     List<CommitVO> selectProjectCodeGroupUser(@Param("con") CodeTimeQuery con);
 
     List<String> preDate(String date);
 
-    List<UserVO> selectSumGroupUser(String startDate,String endDate);
+    List<UserVO> selectSumGroupUser(String startDate, String endDate);
 }

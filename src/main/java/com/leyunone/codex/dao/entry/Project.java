@@ -9,7 +9,7 @@ import lombok.Data;
 public class Project {
 
     @TableId("id")
-    private Integer id;
+    private String projectId;
 
     private String projectName;
 }

@@ -15,4 +15,6 @@ public interface GroupUserDao extends BaseDao<GroupUser> {
     List<GroupUserVO> selectCodeSumByGroup(String startDate, String endDate);
 
     int deleteByGroupId(Integer id);
+
+    List<GroupUserVO> selectGroupUser();
 }

@@ -11,8 +11,6 @@ import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.models.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -21,13 +19,19 @@ import java.util.List;
 /**
  * GITLab API解析服务
  */
-@Service
 public class GitLabAPIService {
 
     private static final Logger logger = LoggerFactory.getLogger(GitLabAPIService.class);
 
-    @Autowired
-    private GitLabApi gitLabApi;
+    private final GitLabApi gitLabApi;
+
+    private GitLabAPIService(GitLabApi gitLabApi){
+        this.gitLabApi = gitLabApi;
+    }
+
+    public static GitLabAPIService buildGitApiService(GitLabApi gitLabApi){
+        return new GitLabAPIService(gitLabApi);
+    }
 
     /**
      * 解析用户下的所有项目
@@ -38,14 +42,13 @@ public class GitLabAPIService {
         try {
             projects = gitLabApi.getProjectApi().getProjects();
         } catch (GitLabApiException e) {
-            logger.error(e.getMessage());
-            throw new RuntimeException("projects is empty");
+            throw new RuntimeException(e);
         }
 
         List<ProjectBO> projectBOS = new ArrayList<>();
         for (Project project : projects) {
             ProjectBO projectBO = new ProjectBO();
-            projectBO.setId(project.getId());
+            projectBO.setProjectId(String.valueOf(project.getId()));
             projectBO.setProjectName(project.getName());
             projectBO.setPath(project.getPath());
             projectBO.setCreateDate(project.getCreatedAt());
@@ -66,6 +69,7 @@ public class GitLabAPIService {
             protectedBranches = gitLabApi.getProtectedBranchesApi().getProtectedBranches(project);
         } catch (GitLabApiException e) {
             logger.error(e.getMessage());
+            throw new RuntimeException(e);
         }
         if (CollectionUtil.isEmpty(protectedBranches)) return CollectionUtil.newArrayList();
 
@@ -98,11 +102,17 @@ public class GitLabAPIService {
             }
         } catch (Exception e) {
             logger.error(e.getMessage());
+            throw new RuntimeException(e);
         }
         if (CollectionUtil.isEmpty(allCommits)) return CollectionUtil.newArrayList();
 
         List<CommitBO> commits = new ArrayList<>();
         for (Commit commit : allCommits) {
+            try {
+                commit = gitLabApi.getCommitsApi().getCommit(projectId,commit.getShortId());
+            }catch (Exception ignored){
+
+            }
             CommitBO commitBO = new CommitBO();
             commitBO.setCommitDate(commit.getCommittedDate());
             commitBO.setCommitterName(commit.getCommitterName());
@@ -113,9 +123,15 @@ public class GitLabAPIService {
 
             //本次提交的修改记录
             CommitStats stats = commit.getStats();
-            commitBO.setAdditions(stats.getAdditions());
-            commitBO.setDeletions(stats.getDeletions());
-            commitBO.setTotal(stats.getTotal());
+            if(ObjectUtil.isNotNull(stats)){
+                commitBO.setAdditions(stats.getAdditions());
+                commitBO.setDeletions(stats.getDeletions());
+                commitBO.setTotal(stats.getTotal());
+            }else{
+                commitBO.setAdditions(0);
+                commitBO.setDeletions(0);
+                commitBO.setTotal(0);
+            }
             commits.add(commitBO);
         }
         return commits;

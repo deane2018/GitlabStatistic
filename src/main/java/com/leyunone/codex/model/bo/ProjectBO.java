@@ -12,7 +12,7 @@ import java.util.Date;
 @Builder
 public class ProjectBO {
 
-    private Integer id;
+    private String projectId;
 
     private String projectName;
 

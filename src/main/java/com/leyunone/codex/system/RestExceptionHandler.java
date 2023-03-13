@@ -1,6 +1,7 @@
 package com.leyunone.codex.system;
 
 import com.leyunone.codex.model.DataResponse;
+import com.xxl.job.core.context.XxlJobHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -20,6 +21,12 @@ public class RestExceptionHandler {
     @ExceptionHandler(Exception.class)
     public DataResponse handleValidationException(Exception e, HttpServletResponse response){
         logger.error(e.getMessage());
+        e.printStackTrace();
+        try {
+            XxlJobHelper.handleFail(e.getMessage());
+        }catch (Exception ignored){
+
+        }
         return DataResponse.buildFailure(e.getMessage());
     }
 

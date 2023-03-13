@@ -1,6 +1,7 @@
 package com.leyunone.codex.task;
 
 import com.leyunone.codex.service.CodeXHourSummaryService;
+import com.xxl.job.core.context.XxlJobHelper;
 import com.xxl.job.core.handler.IJobHandler;
 import com.xxl.job.core.handler.annotation.XxlJob;
 import org.slf4j.Logger;
@@ -22,6 +23,17 @@ public class GitLabHourSummaryHandler extends IJobHandler {
     @XxlJob(value = "git_summary_hour")
     @Override
     public void execute() {
-        codexHourSummaryService.summaryCodeX();
+        String jobParam = XxlJobHelper.getJobParam();
+        String[] split = jobParam.split("#");
+        String token = null;
+        String url = null;
+        if(split.length>1){
+            //自定义时间场景
+            url = split[0];
+            token = split[1];
+        }
+
+        codexHourSummaryService.summaryCodeX(url,token);
+        XxlJobHelper.handleSuccess("success");
     }
 }

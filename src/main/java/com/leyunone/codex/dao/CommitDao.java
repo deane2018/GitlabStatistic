@@ -19,7 +19,7 @@ public interface CommitDao extends BaseDao<Commit> {
 
     void saveBatch(List<CommitBO> commits);
 
-    Date selectLastDate();
+    Date selectLastDate(String url);
 
     List<CommitVO> selectProjectCodeGroupUser(CodeTimeQuery query);
 

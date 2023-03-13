@@ -3,11 +3,11 @@
 <mapper namespace="com.leyunone.codex.dao.mapper.CommitMapper">
     <insert id="batchInsert">
         INSERT INTO x_commit
-        ('id','commit_date','committer_email','committer_name','title','project_id','message','additions','deletions','total')
+        (id,commit_date,committer_email,committer_name,title,project_id,message,additions,deletions,total,storage_url)
         VALUES
         <foreach collection="commits" item="item" separator=",">
             (#{item.id},#{item.commitDate},#{item.committerEmail},#{item.committerName},#{item.title},#{item.projectId},#{item.message}
-            ,#{item.additions},#{item.deletions},#{item.total})
+            ,#{item.additions},#{item.deletions},#{item.total},#{item.storageUrl})
         </foreach>
         ON DUPLICATE key update
         id = values(id),
@@ -19,17 +19,19 @@
         message = values (message),
         additions = values(additions),
         deletions = values(deletions),
-        total = values(total)
+        total = values(total),
+        storage_url = values(storage_url)
     </insert>
 
     <select id="selectLastDate" resultType="date">
         SELECT Max(commit_date)
         FROM x_commit
+        where storage_url = #{url}
     </select>
 
     <select id="selectProjectCodeGroupUser" resultType="com.leyunone.codex.model.vo.CommitVO">
         select
-        DATE_FORMAT(t1.date,'%Y-%m-%d') as date, committer_name, total
+        DATE_FORMAT(t1.date,'%Y-%m-%d') as date, t2.committer_name, t2.total
         from
         (
         select

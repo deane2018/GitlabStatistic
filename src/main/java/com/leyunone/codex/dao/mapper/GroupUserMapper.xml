@@ -11,26 +11,21 @@
 
     </select>
     <select id="selectCodeSumByGroup" resultType="com.leyunone.codex.model.vo.GroupUserVO">
-        SELECT
-            sum( t.total ) code_total,
-            t.group_name
-        FROM
-            (
-                SELECT
-                    g.group_name,
-                    g.group_id,
-                    SUM( c.total ) total
-                FROM
-                    `x_commit` c
-                        LEFT JOIN x_group_user gu ON c.committer_name = gu.user_name
-                        LEFT JOIN x_group g ON gu.group_id = g.group_id
-                WHERE c.commit_date >= #{startDate} AND c.commit_date &lt;=#{endDate}
-                GROUP BY
-                    g.group_id,
-                    c.committer_name
-            ) t
-        GROUP BY
-            t.group_id
+        SELECT sum(t.total) code_total,
+               t.group_name
+        FROM (
+                 SELECT g.group_name,
+                        g.group_id,
+                        SUM(c.total) total
+                 FROM `x_commit` c
+                          LEFT JOIN x_group_user gu ON c.committer_name = gu.user_name
+                          LEFT JOIN x_group g ON gu.group_id = g.group_id
+                 WHERE c.commit_date >= #{startDate}
+                   AND c.commit_date &lt;= #{endDate}
+                 GROUP BY g.group_id,
+                          c.committer_name
+             ) t
+        GROUP BY t.group_id
     </select>
     <select id="groupTimeCode" resultType="com.leyunone.codex.model.vo.GroupUserVO">
         select
@@ -70,5 +65,8 @@
         ) t2
         on t1.date = STR_TO_DATE(t2.date, '%Y-%m-%d')
         order by date asc
+    </select>
+    <select id="selectGroupUser" resultType="com.leyunone.codex.model.vo.GroupUserVO">
+        SELECT u.user_name,gu.group_id FROM x_user u LEFT JOIN x_group_user gu ON u.user_name = gu.user_name
     </select>
 </mapper>

@@ -1,7 +1,6 @@
 package com.leyunone.codex.dao.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.leyunone.codex.dao.entry.Group;
 import com.leyunone.codex.dao.entry.GroupUser;
 import com.leyunone.codex.model.query.CodeTimeQuery;
 import com.leyunone.codex.model.vo.GroupUserVO;
@@ -16,4 +15,6 @@ public interface GroupUserMapper extends BaseMapper<GroupUser> {
     List<GroupUserVO> groupTimeCode(@Param("con") CodeTimeQuery con);
 
     List<GroupUserVO> selectCodeSumByGroup(String startDate,String endDate);
+
+    List<GroupUserVO> selectGroupUser();
 }

@@ -1,23 +1,16 @@
 package com.leyunone.codex.config;
 
-import org.gitlab4j.api.GitLabApi;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * @author 乐云一
+ * @author DELL
  */
 @Configuration
 public class GitLabConfig {
 
-    @Value("${gitlab.token:test}")
-    private String privateToken;
-    @Value("${gitlab.url:test}")
-    private String url;
-
-    @Bean
-    public GitLabApi gitlabAPI(){
-        return new GitLabApi(url,privateToken);
-    }
+//    @Bean
+//    public GitLabApi gitlabAPI(){
+//        String privateToken = "4fBW67FSbV3T7nsQ_WPM";
+//        return new GitLabApi("http://192.168.2.9:30000",privateToken);
+//    }
 }

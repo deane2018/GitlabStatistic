@@ -6,11 +6,8 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.leyunone.codex.dao.CommitDao;
-import com.leyunone.codex.dao.UserDao;
 import com.leyunone.codex.dao.entry.Commit;
-import com.leyunone.codex.dao.entry.User;
 import com.leyunone.codex.dao.mapper.CommitMapper;
-import com.leyunone.codex.dao.mapper.UserMapper;
 import com.leyunone.codex.model.bo.CommitBO;
 import com.leyunone.codex.model.query.CodeTimeQuery;
 import com.leyunone.codex.model.query.CommitQuery;
@@ -47,8 +44,8 @@ public class CommitRepository extends BaseRepository<CommitMapper, Commit> imple
     }
 
     @Override
-    public Date selectLastDate() {
-        return this.baseMapper.selectLastDate();
+    public Date selectLastDate(String url) {
+        return this.baseMapper.selectLastDate(url);
     }
 
     @Override

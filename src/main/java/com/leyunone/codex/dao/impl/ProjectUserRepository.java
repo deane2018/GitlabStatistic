@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.leyunone.codex.dao.ProjectUserDao;
 import com.leyunone.codex.dao.entry.ProjectUser;
 import com.leyunone.codex.dao.mapper.ProjectUserMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

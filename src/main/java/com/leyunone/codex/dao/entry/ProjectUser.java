@@ -10,7 +10,7 @@ public class ProjectUser {
 
     private String id;
 
-    private Integer projectId;
+    private String projectId;
 
     private String userName;
 

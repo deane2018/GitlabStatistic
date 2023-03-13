@@ -10,7 +10,7 @@ import java.util.List;
 
 /**
  *基础Geteway
- * @author pengli
+ * @author leyunone
  */
 public interface BaseDao<DO> {
 

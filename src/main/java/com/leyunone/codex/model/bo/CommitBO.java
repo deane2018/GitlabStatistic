@@ -22,7 +22,7 @@ public class CommitBO {
 
     private String id;
 
-    private Integer projectId;
+    private String projectId;
 
     private String message;
 
@@ -40,4 +40,6 @@ public class CommitBO {
      * 总数
      */
     private Integer total;
+
+    private String storageUrl;
 }

@@ -2,11 +2,8 @@ package com.leyunone.codex.dao.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
-import com.leyunone.codex.dao.GroupDao;
 import com.leyunone.codex.dao.GroupUserDao;
-import com.leyunone.codex.dao.entry.Group;
 import com.leyunone.codex.dao.entry.GroupUser;
-import com.leyunone.codex.dao.mapper.GroupMapper;
 import com.leyunone.codex.dao.mapper.GroupUserMapper;
 import com.leyunone.codex.model.query.CodeTimeQuery;
 import com.leyunone.codex.model.vo.GroupUserVO;
@@ -37,5 +34,10 @@ public class GroupUserRepository extends BaseRepository<GroupUserMapper, GroupUs
         LambdaQueryWrapper<GroupUser> lambda = new QueryWrapper<GroupUser>().lambda();
         lambda.eq(GroupUser::getGroupId,id);
         return this.baseMapper.delete(lambda);
+    }
+
+    @Override
+    public List<GroupUserVO> selectGroupUser() {
+        return this.baseMapper.selectGroupUser();
     }
 }
