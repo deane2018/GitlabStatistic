@@ -51,6 +51,16 @@ public class CodeXSummaryService {
 
     /**
      * 全统计 项目 分支 每次提交
+     *
+     * 1\ 拿到所有可见的项目
+     * 2\ 拿到项目下的所有分支
+     * 3\ 拿到所有分支下的提交记录
+     * 4\ 对所有提交记录进行内容解析： 提交者，时间，提交者与提交项目关联，本次提交量，提交者累计提交量...
+     * 5\ 将所有表的数据清空
+     * 6\ 将收集到的：项目、分支、提交记录、提交者【累计量，邮箱，账号】、项目与人员关联关系 批量更新或插入到表中
+     *
+     * @param url
+     * @param token
      */
     public void summaryCodeX(String url, String token) {
         GitLabAPIService gitLabAPIService = GitLabAPIService.buildGitApiService(new GitLabApi(url, token));
