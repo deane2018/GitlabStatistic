@@ -19,5 +19,7 @@ public class ChartBean {
     /**
      * 数据
      */
-    private List<Integer> data;
+    private List<Long> data;
+
+    private double y;
 }

@@ -12,8 +12,14 @@ public class ProjectUser {
 
     private String projectId;
 
-    private String userName;
+    private String userId;
 
     @TableField(exist = false)
     private String projectName;
+
+    @TableField(exist = false)
+    private String realUserName;
+
+    @TableField(exist = false)
+    private Integer realUserId;
 }

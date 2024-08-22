@@ -17,8 +17,8 @@ public class GroupUser {
 
     @TableId(value = "id",type = IdType.AUTO)
     private Integer id;
-
+    
     private Integer groupId;
-
-    private String userName;
+    
+    private Integer realUserId;
 }

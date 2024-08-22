@@ -1,18 +1,18 @@
 package com.leyunone.codex.dao;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.io.Serializable;
 import java.util.List;
 
 /**
  *基础Geteway
- * @author leyunone
+ * @author LeYunone
  */
-public interface BaseDao<DO> {
+public interface BaseDao<DO> extends IService<DO> {
 
     boolean insertOrUpdate(Object entity);
 
@@ -44,9 +44,9 @@ public interface BaseDao<DO> {
      * 万能eq分页查询
      * @return
      */
-    IPage<DO> selectByConPage(Object o, Page page);
+    Page<DO> selectByConPage(Object o, Page page);
 
-    IPage<DO> selectByConPage(Object o, Integer index, Integer size);
+    Page<DO> selectByConPage(Object o, Integer index, Integer size);
 
     <R,Z> List<R> selectByConOrder(Object o, Class<R> clazz, int type, SFunction<DO, Z>... tables);
 
@@ -71,6 +71,8 @@ public interface BaseDao<DO> {
     <R> R selectById(Serializable id, Class<R> clazz);
 
     DO selectById(Serializable id);
+
+    List<DO> selectByIds(List<? extends Serializable> ids);
 
     <R> R selectOne(Object o, Class<R> clazz);
 

@@ -1,26 +1,40 @@
 package com.leyunone.codex.service;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.collection.ListUtil;
+import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.leyunone.codex.control.SystemController;
 import com.leyunone.codex.dao.*;
 import com.leyunone.codex.dao.entry.Branches;
-import com.leyunone.codex.dao.entry.Commit;
 import com.leyunone.codex.dao.entry.ProjectUser;
+import com.leyunone.codex.dao.entry.Storage;
 import com.leyunone.codex.dao.mapper.CommitMapper;
+import com.leyunone.codex.model.ResponseCell;
 import com.leyunone.codex.model.bo.BranchesBO;
 import com.leyunone.codex.model.bo.CommitBO;
 import com.leyunone.codex.model.bo.ProjectBO;
 import com.leyunone.codex.model.bo.UserBO;
-import com.leyunone.codex.model.ResponseCell;
 import org.apache.ibatis.session.ExecutorType;
 import org.apache.ibatis.session.SqlSession;
 import org.apache.ibatis.session.SqlSessionFactory;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.models.Project;
 import org.mybatis.spring.SqlSessionTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 代码统计总结服务
@@ -28,98 +42,124 @@ import java.util.*;
 @Service
 public class CodeXSummaryService {
 
-    @Autowired
-    private ProjectDao projectDao;
-    @Autowired
-    private BranchesDao branchesDao;
-    @Autowired
-    private UserDao userDao;
-    @Autowired
-    private CommitDao commitDao;
-    @Autowired
-    private ProjectUserDao projectUserDao;
-    @Autowired
-    private SqlSessionTemplate sqlSessionTemplate;
+    public static final Logger logger = LoggerFactory.getLogger(CodeXSummaryService.class);
 
-    /**
-     * 前置处理
-     */
-    public void preResole() {
-        List<Commit> commits = commitDao.selectByCon(null);
+    private final ProjectDao projectDao;
+    private final BranchesDao branchesDao;
+    private final UserDao userDao;
+    private final ProjectUserDao projectUserDao;
+    private final SqlSessionTemplate sqlSessionTemplate;
+    private final StorageDao storageDao;
 
+    public CodeXSummaryService(ProjectDao projectDao, BranchesDao branchesDao, UserDao userDao, ProjectUserDao projectUserDao, SqlSessionTemplate sqlSessionTemplate, StorageDao storageDao) {
+        this.projectDao = projectDao;
+        this.branchesDao = branchesDao;
+        this.userDao = userDao;
+        this.projectUserDao = projectUserDao;
+        this.sqlSessionTemplate = sqlSessionTemplate;
+        this.storageDao = storageDao;
+    }
+
+
+    private Storage getStorage(String url) {
+        Storage storage = new Storage();
+        storage.setStorageUrl(url);
+        storage.setStorageName(url);
+        List<Storage> storages = storageDao.selectByUrl(url);
+        if (CollectionUtil.isEmpty(storages)) {
+            return storageDao.saveStorage(storage);
+        }
+        return storages.get(0);
     }
 
     /**
      * 全统计 项目 分支 每次提交
-     *
-     * 1\ 拿到所有可见的项目
-     * 2\ 拿到项目下的所有分支
-     * 3\ 拿到所有分支下的提交记录
-     * 4\ 对所有提交记录进行内容解析： 提交者，时间，提交者与提交项目关联，本次提交量，提交者累计提交量...
-     * 5\ 将所有表的数据清空
-     * 6\ 将收集到的：项目、分支、提交记录、提交者【累计量，邮箱，账号】、项目与人员关联关系 批量更新或插入到表中
-     *
-     * @param url
-     * @param token
      */
-    public void summaryCodeX(String url, String token) {
-        GitLabAPIService gitLabAPIService = GitLabAPIService.buildGitApiService(new GitLabApi(url, token));
+    public void summaryCodeX(String url,String startTime) {
+        SystemController.status = 1;
+        //拿到仓库的编号
+        Storage storage = this.getStorage(url);
+        if(StringUtils.isBlank(storage.getToken())){
+            return;
+        }
+        GitLabAPIService gitLabAPIService = GitLabAPIService.buildGitApiService(new GitLabApi(url, storage.getToken()));
+
         //当前可见所有项目
         ResponseCell<List<ProjectBO>, List<Project>> responseCell = gitLabAPIService.resoleProjects();
-        this.projectNew(responseCell.getDataBO(), url);
+        this.projectNew(responseCell.getDataBO(), storage);
 
         Map<Integer, List<BranchesBO>> projectTobranches = new HashMap<>();
         List<Branches> branches = new ArrayList<>();
         for (Project project : responseCell.getDataApi()) {
             List<BranchesBO> branchesBOS = gitLabAPIService.resoleBranches(project);
             branchesBOS.forEach((t) -> {
-                branches.add(Branches.builder().id(project.getId() + "#" + t.getBranchName()).projectId(String.valueOf(project.getId())).branchesName(t.getBranchName()).build());
+                Branches build = Branches.builder()
+                        .branchesId(project.getId() + "#" + storage.getStorageId() + "#" + t.getBranchName())
+                        .projectId(String.valueOf(project.getId())).branchesName(t.getBranchName()).build();
+                branches.add(build);
             });
             projectTobranches.put(project.getId(), branchesBOS);
         }
+
         //TODO 分支
-        this.branchesNew(branches, url);
+        this.branchesNew(branches, storage);
 
-        Map<String, UserBO> userMap = new HashMap<>();
-        Map<String, ProjectUser> projectUserMap = new HashMap<>();
-        List<CommitBO> commits = new ArrayList<>();
-        for (Integer projectId : projectTobranches.keySet()) {
-            List<CommitBO> commitBOS = gitLabAPIService.resoleCommits(projectId, null, null);
-            commitBOS.forEach((t) -> t.setProjectId(String.valueOf(projectId)));
-            for (CommitBO commitBO : commitBOS) {
-                commitBO.setStorageUrl(url);
-                //遍历提交记录时，绑定项目和成员的关系
-                if (!projectUserMap.containsKey(projectId + "#" + commitBO.getCommitterName())) {
-                    ProjectUser projectUser = new ProjectUser();
-                    projectUser.setId(commitBO.getCommitterName() + "#" + projectId);
-                    projectUser.setProjectId(String.valueOf(projectId));
-                    projectUser.setUserName(commitBO.getCommitterName());
-                    projectUserMap.put(projectId + "#" + commitBO.getCommitterName(), projectUser);
+        Map<String, UserBO> userMap = new ConcurrentHashMap<>();
+        Map<String, ProjectUser> projectUserMap = new ConcurrentHashMap<>();
+        ExecutorService executorService = Executors.newFixedThreadPool(10);
+        List<List<Integer>> partition = ListUtil.partition(CollectionUtil.newArrayList(projectTobranches.keySet()), 8);
+        final CountDownLatch latch = new CountDownLatch(partition.size());
+        for(List<Integer> threadProjectIds : partition){
+            executorService.submit(() -> {
+                for (Integer projectId : threadProjectIds) {
+                    logger.info( " ======== {}, is start get Commit,startTime:{}",projectId,startTime);
+
+                    List<CommitBO> commitBOList = gitLabAPIService.resoleCommits(projectId, null, startTime);
+                    commitBOList.forEach(commitBO-> {
+                        commitBO.setProjectId(String.valueOf(projectId));
+                        commitBO.setStorageId(storage.getStorageId());
+                        String userId = commitBO.getUserName() + "#" + storage.getStorageId();
+                        //遍历提交记录时，绑定项目和成员的关系
+                        if (!projectUserMap.containsKey(projectId + "#" + commitBO.getUserName())) {
+                            ProjectUser projectUser = new ProjectUser();
+                            projectUser.setId(commitBO.getUserName() + "#" + projectId);
+                            projectUser.setProjectId(String.valueOf(projectId));
+                            projectUser.setUserId(userId);
+                            projectUserMap.put(projectId + "#" + commitBO.getUserName(), projectUser);
+                        }
+
+                        //累加用户
+                        if (userMap.containsKey(commitBO.getUserName())) {
+                        } else {
+                            UserBO userBO = new UserBO();
+                            userBO.setUserId(userId);
+                            userBO.setUserEmail(commitBO.getCommitterEmail());
+                            userBO.setUserName(commitBO.getUserName());
+                            userBO.setStorageId(storage.getStorageId());
+
+                            userMap.put(userBO.getUserName(), userBO);
+                        }
+                    });
+                    commitNew(commitBOList, storage);
                 }
-
-                //累加用户
-                if (userMap.containsKey(commitBO.getCommitterName())) {
-                    UserBO userBO = userMap.get(commitBO.getCommitterName());
-
-                    userBO.setCodeAdditions(userBO.getCodeAdditions() + commitBO.getAdditions());
-                    userBO.setCodeDeletions(userBO.getCodeDeletions() + commitBO.getDeletions());
-                    userBO.setCodeTotal(userBO.getCodeTotal() + commitBO.getTotal());
-                } else {
-                    UserBO userBO = new UserBO();
-                    userBO.setCodeAdditions(commitBO.getAdditions());
-                    userBO.setCodeDeletions(commitBO.getDeletions());
-                    userBO.setCodeTotal(commitBO.getTotal());
-                    userBO.setUserEmail(commitBO.getCommitterEmail());
-                    userBO.setUserName(commitBO.getCommitterName());
-                    userMap.put(userBO.getUserName(), userBO);
-                }
-            }
-            commits.addAll(commitBOS);
+                latch.countDown();
+                logger.info("==================>>> TTTTTTTTT thread <<<<<====================");
+                logger.info("====================="+latch.getCount()+"=======================");
+                logger.info("==================>>> TTTTTTTTT thread <<<<<====================");
+            });
         }
+        logger.info("==================>>> wait main thread <<<<<====================");
+        try {
+            latch.await();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        ;
         this.userNew(CollectionUtil.newArrayList(userMap.values()));
-        //全量同步提交记录
-        this.commitNew(commits, url);
-        this.projectUserNew(CollectionUtil.newArrayList(projectUserMap.values()), url);
+//        //全量同步提交记录
+//        this.commitNew(commits, storage);
+        this.projectUserNew(CollectionUtil.newArrayList(projectUserMap.values()), storage);
+        SystemController.status = 0;
     }
 
     /**
@@ -127,10 +167,19 @@ public class CodeXSummaryService {
      *
      * @param projects
      */
-    private void projectNew(List<ProjectBO> projects, String url) {
+    private void projectNew(List<ProjectBO> projects, Storage storage) {
+        logger.info(" =========== projects start add,{}",projects.size());
         //重命名项目id
-        projects.forEach((t) -> t.setProjectId(t.getProjectId() + "#" + url));
-        projectDao.insertOrUpdateBatch(projects);
+        projects.forEach((t) -> {
+            t.setProjectId(t.getProjectId() + "#" + storage.getStorageId());
+            t.setStorageId(storage.getStorageId());
+        });
+        try {
+            projectDao.insertOrUpdateBatch(projects);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        logger.info("============= projects add success");
     }
 
     /**
@@ -138,10 +187,17 @@ public class CodeXSummaryService {
      *
      * @param branches
      */
-    private void branchesNew(List<Branches> branches, String url) {
+    private void branchesNew(List<Branches> branches, Storage storage) {
+        logger.info(" ================== branches start add,{}",branches.size());
+
         //重命名项目id
-        branches.forEach((t) -> t.setProjectId(t.getProjectId() + "#" + url));
-        branchesDao.insertOrUpdateBatch(branches);
+        branches.forEach((t) -> t.setProjectId(t.getProjectId() + "#" + storage.getStorageId()));
+        try {
+            branchesDao.insertOrUpdateBatch(branches);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        logger.info(" ===================== branches add success");
     }
 
     /**
@@ -150,10 +206,13 @@ public class CodeXSummaryService {
      * @param users
      */
     private void userNew(List<UserBO> users) {
-        //情况人员的提交量
-        int i = userDao.updateUserCodeTotal0();
-
-        userDao.insertOrUpdateBatch(users);
+        logger.info(" ================= users start add,{}",users.size());
+        try {
+            userDao.saveUser(users);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        logger.info(" ==================== users add success");
     }
 
     /**
@@ -161,7 +220,9 @@ public class CodeXSummaryService {
      *
      * @param commitBOS
      */
-    private void commitNew(List<CommitBO> commitBOS, String url) {
+    public void commitNew(List<CommitBO> commitBOS, Storage storage) {
+        logger.info(" ==================== commit start add,{}",commitBOS.size());
+
         SqlSessionFactory sqlSessionFactory = sqlSessionTemplate.getSqlSessionFactory();
         //可以执行批量操作的sqlSession
         SqlSession openSession = sqlSessionFactory.openSession(ExecutorType.BATCH, false);
@@ -170,7 +231,8 @@ public class CodeXSummaryService {
             List<CommitBO> list = new ArrayList<>();
             for (CommitBO commitBO : commitBOS) {
                 //重命名项目id
-                commitBO.setProjectId(commitBO.getProjectId() + "#" + url);
+                commitBO.setProjectId(commitBO.getProjectId() + "#" + storage.getStorageId());
+                commitBO.setUserId(commitBO.getUserName() + "#" + storage.getStorageId());
                 list.add(commitBO);
                 if (list.size() == 1000) {
                     mapper.batchInsert(list);
@@ -182,15 +244,25 @@ public class CodeXSummaryService {
                 mapper.batchInsert(list);
             }
             openSession.commit();
+        } catch (Exception e) {
+            e.printStackTrace();
         } finally {
             openSession.clearCache();
             openSession.close();
         }
+        logger.info(" ====================== commit add success");
     }
 
-    private void projectUserNew(List<ProjectUser> projectUsers, String url) {
+    private void projectUserNew(List<ProjectUser> projectUsers, Storage storage) {
+        logger.info(" ======================== ProjectUser start add,{}",projectUsers.size());
+
         //重命名项目id
-        projectUsers.forEach((t) -> t.setProjectId(t.getProjectId() + "#" + url));
-        projectUserDao.insertOrUpdateBatch(projectUsers);
+        projectUsers.forEach((t) -> t.setProjectId(t.getProjectId() + "#" + storage.getStorageId()));
+        try {
+            projectUserDao.insertOrUpdateBatch(projectUsers);
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        logger.info(" ==================== ProjectUser add success");
     }
 }

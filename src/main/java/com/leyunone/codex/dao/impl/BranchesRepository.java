@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public class BranchesRepository extends BaseRepository<BranchesMapper, Branches> implements BranchesDao {
-
+    
 }

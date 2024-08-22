@@ -1,11 +1,13 @@
 package com.leyunone.codex.service;
 
 import cn.hutool.core.collection.CollectionUtil;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.toolkit.StringUtils;
+import com.leyunone.codex.model.ResponseCell;
 import com.leyunone.codex.model.bo.BranchesBO;
 import com.leyunone.codex.model.bo.CommitBO;
 import com.leyunone.codex.model.bo.ProjectBO;
-import com.leyunone.codex.model.ResponseCell;
 import org.gitlab4j.api.GitLabApi;
 import org.gitlab4j.api.GitLabApiException;
 import org.gitlab4j.api.models.*;
@@ -42,7 +44,6 @@ public class GitLabAPIService {
         try {
             projects = gitLabApi.getProjectApi().getProjects();
         } catch (GitLabApiException e) {
-            throw new RuntimeException(e);
         }
 
         List<ProjectBO> projectBOS = new ArrayList<>();
@@ -50,7 +51,7 @@ public class GitLabAPIService {
             ProjectBO projectBO = new ProjectBO();
             projectBO.setProjectId(String.valueOf(project.getId()));
             projectBO.setProjectName(project.getName());
-            projectBO.setPath(project.getPath());
+            projectBO.setPath(project.getWebUrl());
             projectBO.setCreateDate(project.getCreatedAt());
             projectBOS.add(projectBO);
         }
@@ -69,7 +70,6 @@ public class GitLabAPIService {
             protectedBranches = gitLabApi.getProtectedBranchesApi().getProtectedBranches(project);
         } catch (GitLabApiException e) {
             logger.error(e.getMessage());
-            throw new RuntimeException(e);
         }
         if (CollectionUtil.isEmpty(protectedBranches)) return CollectionUtil.newArrayList();
 
@@ -90,19 +90,18 @@ public class GitLabAPIService {
      * @param brunchName 分支名
      * @param lastDate   开始时间
      */
-    public List<CommitBO> resoleCommits(Integer projectId, String brunchName, Date lastDate) {
+    public List<CommitBO> resoleCommits(Integer projectId, String brunchName, String lastDate) {
         //项目下的所有提交记录
         List<Commit> allCommits = null;
         try {
-            if (ObjectUtil.isNotNull(lastDate)) {
-                allCommits = gitLabApi.getCommitsApi().getCommits(projectId, brunchName, lastDate, new Date());
+            if (StringUtils.isNotBlank(lastDate)) {
+                allCommits = gitLabApi.getCommitsApi().getCommits(projectId, brunchName, DateUtil.parse(lastDate,"yyyy-MM"), new Date());
             } else {
                 //该项目全提交记录
                 allCommits = gitLabApi.getCommitsApi().getCommits(projectId);
             }
         } catch (Exception e) {
             logger.error(e.getMessage());
-            throw new RuntimeException(e);
         }
         if (CollectionUtil.isEmpty(allCommits)) return CollectionUtil.newArrayList();
 
@@ -111,15 +110,19 @@ public class GitLabAPIService {
             try {
                 commit = gitLabApi.getCommitsApi().getCommit(projectId,commit.getShortId());
             }catch (Exception ignored){
-
             }
+            Author author = commit.getAuthor();
+            //跳过合并分支的提交
+            if(commit.getMessage().startsWith("Merge ")) continue;
             CommitBO commitBO = new CommitBO();
             commitBO.setCommitDate(commit.getCommittedDate());
-            commitBO.setCommitterName(commit.getCommitterName());
-            commitBO.setCommitterEmail(commit.getCommitterEmail());
+//            commitBO.setUserName(ObjectUtil.isNotNull(author)?author.getUsername():commit.getAuthorName());
+            commitBO.setUserName(commit.getCommitterName());
+            commitBO.setCommitterEmail(commit.getAuthorEmail());
             commitBO.setTitle(commit.getTitle());
-            commitBO.setId(commit.getId());
+            commitBO.setCommitId(commit.getId());
             commitBO.setMessage(commit.getMessage());
+            commitBO.setBranchesName(brunchName);
 
             //本次提交的修改记录
             CommitStats stats = commit.getStats();

@@ -3,8 +3,10 @@ package com.leyunone.codex.dao;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.leyunone.codex.dao.entry.Commit;
 import com.leyunone.codex.model.bo.CommitBO;
+import com.leyunone.codex.model.query.CodeQuery;
 import com.leyunone.codex.model.query.CodeTimeQuery;
 import com.leyunone.codex.model.query.CommitQuery;
+import com.leyunone.codex.model.vo.CodeInfoVO;
 import com.leyunone.codex.model.vo.CommitVO;
 import com.leyunone.codex.model.vo.UserVO;
 
@@ -23,6 +25,19 @@ public interface CommitDao extends BaseDao<Commit> {
 
     List<CommitVO> selectProjectCodeGroupUser(CodeTimeQuery query);
 
+    List<CommitVO> selectProjectCodeGroupUserMonth(CodeTimeQuery query);
+
     List<String> preDate(String date);
 
+    List<UserVO> selectByUser(CodeTimeQuery query);
+
+    List<CommitVO> selectProjectCodeTime(CodeTimeQuery query);
+
+    List<CommitVO> selectProjectCodeTimeMonth(CodeTimeQuery query);
+
+    List<CommitVO> selectByProject(CodeTimeQuery codeTimeQuery);
+    
+    List<CodeInfoVO> selectCodeStatistics(CodeQuery query);
+
+    List<CodeInfoVO> selectProjectNumber(CodeQuery query);
 }

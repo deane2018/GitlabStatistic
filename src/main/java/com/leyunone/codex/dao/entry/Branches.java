@@ -13,11 +13,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @TableName("x_branches")
 public class Branches {
-
-    @TableId("id")
-    private String id;
-
+    
+    @TableId("branches_id")
+    private String branchesId;
+    
     private String projectId;
-
+    
     private String branchesName;
 }

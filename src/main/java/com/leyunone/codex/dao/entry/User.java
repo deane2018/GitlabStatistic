@@ -8,16 +8,14 @@ import lombok.Data;
 @TableName("x_user")
 public class User {
 
-    @TableId(value = "user_name")
+    @TableId(value = "user_id")
+    private String userId;
+    
     private String userName;
 
     private String userEmail;
+    
+    private String realUserName;
 
-    private String userRealName;
-
-    private Integer codeAdditions;
-
-    private Integer codeDeletions;
-
-    private Integer codeTotal;
+    private Integer storageId;
 }

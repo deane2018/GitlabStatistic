@@ -9,12 +9,8 @@ import org.apache.ibatis.annotations.Param;
 import java.util.List;
 
 public interface GroupUserMapper extends BaseMapper<GroupUser> {
-
-    List<GroupUserVO> selectCodeByGroup();
-
-    List<GroupUserVO> groupTimeCode(@Param("con") CodeTimeQuery con);
-
-    List<GroupUserVO> selectCodeSumByGroup(String startDate,String endDate);
-
-    List<GroupUserVO> selectGroupUser();
+    
+    List<GroupUserVO> selectByUserIds(@Param("ids") List<Integer> realUserId);
+    
+    List<String> selectGroupByUser(@Param("users") List<String> userNames);
 }

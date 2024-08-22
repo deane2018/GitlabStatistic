@@ -7,7 +7,6 @@ import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
-import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -23,7 +22,7 @@ import java.util.List;
 /**
  * 抽象Repository服务类
  *
- * @author leyunone
+ * @author LeYunone
  */
 public class BaseRepository<M extends BaseMapper<DO>, DO> extends ServiceImpl<M, DO> implements BaseDao<DO> {
 
@@ -70,7 +69,7 @@ public class BaseRepository<M extends BaseMapper<DO>, DO> extends ServiceImpl<M,
     }
 
     @Override
-    public IPage<DO> selectByConPage(Object o, Page page) {
+    public Page<DO> selectByConPage(Object o, Page page) {
         DO jDO = (DO) JSONUtil.toBean(JSONUtil.toJsonStr(o), do_Class);
         LambdaQueryWrapper<DO> queryWrapper = new QueryWrapper<DO>().lambda();
         queryWrapper.setEntity(jDO);
@@ -78,7 +77,7 @@ public class BaseRepository<M extends BaseMapper<DO>, DO> extends ServiceImpl<M,
     }
 
     @Override
-    public IPage<DO> selectByConPage(Object o, Integer index, Integer size){
+    public Page<DO> selectByConPage(Object o, Integer index, Integer size){
         Page page = new Page(index,size);
         return this.selectByConPage(o,page);
     }
@@ -151,6 +150,11 @@ public class BaseRepository<M extends BaseMapper<DO>, DO> extends ServiceImpl<M,
     @Override
     public DO selectById(Serializable id) {
         return (DO) this.selectById(id, do_Class);
+    }
+
+    @Override
+    public List<DO> selectByIds(List<? extends Serializable> ids) {
+        return this.baseMapper.selectBatchIds(ids);
     }
 
     @Override

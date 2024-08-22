@@ -1,5 +1,6 @@
 package com.leyunone.codex.dao.entry;
 
+import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
@@ -14,12 +15,12 @@ public class Commit {
 
     private String committerEmail;
 
-    private String committerName;
+    private String userName;
 
     private String title;
 
-    @TableId(value = "id")
-    private String id;
+    @TableId(value = "commit_id")
+    private String commitId;
 
     private String projectId;
 
@@ -39,6 +40,14 @@ public class Commit {
      * 总数
      */
     private Integer total;
-
-    private String storageUrl;
+    
+    private String storageId;
+    
+    private String userId;
+    
+    @TableField(exist = false)
+    private String commitDateStr;
+    
+    @TableField(exist = false)
+    private String projectName;
 }

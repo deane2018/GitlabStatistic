@@ -3,9 +3,9 @@ package com.leyunone.codex.model;
 import lombok.*;
 
 /**
- * @author leyunone
- * @date  2021-08-10 15:05
- *   一般响应结果集
+ * @author LeYunone
+ * @date 2021-08-10 15:05
+ * 一般响应结果集
  */
 @Getter
 @ToString
@@ -20,7 +20,7 @@ public class DataResponse<T> {
 
     private String message;
 
-    private String code;
+    private int code;
 
     public DataResponse() {
     }
@@ -30,8 +30,12 @@ public class DataResponse<T> {
         response.setStatus(true);
         response.setData(data);
         response.setCode(ResponseCode.SUCCESS.getCode());
-        response.setMessage(ResponseCode.SUCCESS.getDesc());
+        response.setMessage(ResponseCode.SUCCESS.getMessage());
         return response;
+    }
+
+    public static <T> DataResponse<?> of() {
+        return buildSuccess();
     }
 
     public T getData() {
@@ -43,37 +47,37 @@ public class DataResponse<T> {
     }
 
     public static <T> DataResponse<T> of(boolean status, ResponseCode responseCode, T data) {
-        DataResponse<T> response = new DataResponse();
+        DataResponse<T> response = new DataResponse<>();
         response.setStatus(status);
         response.setData(data);
         response.setCode(responseCode.getCode());
-        response.setMessage(responseCode.getDesc());
+        response.setMessage(responseCode.getMessage());
         return response;
     }
 
-    public static DataResponse buildFailure(ResponseCode responseCode) {
-        return of(false, responseCode, (Object)null);
+    public static DataResponse<?> buildFailure(ResponseCode responseCode) {
+        return of(false, responseCode, (Object) null);
     }
 
-    public static DataResponse buildFailure(String message) {
-        DataResponse response = of(false, ResponseCode.ERROR, (Object)null);
+    public static DataResponse<?> buildFailure(String message) {
+        DataResponse<?> response = of(false, ResponseCode.ERROR, (Object) null);
         response.setMessage(message);
         return response;
     }
 
-    public static DataResponse buildFailure(){
-        DataResponse response = new DataResponse();
+    public static DataResponse<?> buildFailure() {
+        DataResponse<?> response = new DataResponse<>();
         response.setStatus(false);
         response.setCode(ResponseCode.ERROR.getCode());
-        response.setMessage(ResponseCode.ERROR.getDesc());
+        response.setMessage(ResponseCode.ERROR.getMessage());
         return response;
     }
 
-    public static DataResponse buildSuccess() {
-        DataResponse response = new DataResponse();
+    public static DataResponse<?> buildSuccess() {
+        DataResponse<?> response = new DataResponse<>();
         response.setStatus(true);
         response.setCode(ResponseCode.SUCCESS.getCode());
-        response.setMessage(ResponseCode.SUCCESS.getDesc());
+        response.setMessage(ResponseCode.SUCCESS.getMessage());
         return response;
     }
 

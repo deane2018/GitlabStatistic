@@ -8,13 +8,16 @@ import java.util.List;
 
 public interface GroupUserDao extends BaseDao<GroupUser> {
 
-    List<GroupUserVO> selectCodeByGroup();
-
-    List<GroupUserVO> groupTimeCode(CodeTimeQuery query);
-
-    List<GroupUserVO> selectCodeSumByGroup(String startDate, String endDate);
 
     int deleteByGroupId(Integer id);
 
-    List<GroupUserVO> selectGroupUser();
+    int deleteByUserId(Integer userId);
+
+    List<GroupUser> selectRealUserByGroupId(Integer groupId);
+
+    List<GroupUserVO> selectByUserIds(List<Integer> userId);
+
+    List<String> selectGroupByUser(List<String> userNames);
+
+
 }

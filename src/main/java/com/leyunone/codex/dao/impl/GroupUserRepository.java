@@ -15,21 +15,6 @@ import java.util.List;
 public class GroupUserRepository extends BaseRepository<GroupUserMapper, GroupUser> implements GroupUserDao {
 
     @Override
-    public List<GroupUserVO> selectCodeByGroup() {
-        return this.baseMapper.selectCodeByGroup();
-    }
-
-    @Override
-    public List<GroupUserVO> groupTimeCode(CodeTimeQuery query) {
-        return this.baseMapper.groupTimeCode(query);
-    }
-
-    @Override
-    public List<GroupUserVO> selectCodeSumByGroup(String startDate, String endDate) {
-        return this.baseMapper.selectCodeSumByGroup(startDate, endDate);
-    }
-
-    @Override
     public int deleteByGroupId(Integer id) {
         LambdaQueryWrapper<GroupUser> lambda = new QueryWrapper<GroupUser>().lambda();
         lambda.eq(GroupUser::getGroupId,id);
@@ -37,7 +22,26 @@ public class GroupUserRepository extends BaseRepository<GroupUserMapper, GroupUs
     }
 
     @Override
-    public List<GroupUserVO> selectGroupUser() {
-        return this.baseMapper.selectGroupUser();
+    public int deleteByUserId(Integer userId) {
+        LambdaQueryWrapper<GroupUser> lambda = new QueryWrapper<GroupUser>().lambda();
+        lambda.eq(GroupUser::getRealUserId,userId);
+        return this.baseMapper.delete(lambda);
+    }
+
+    @Override
+    public List<GroupUser> selectRealUserByGroupId(Integer groupId) {
+        LambdaQueryWrapper<GroupUser> lambda = new QueryWrapper<GroupUser>().lambda();
+        lambda.eq(GroupUser::getGroupId,groupId);
+        return this.baseMapper.selectList(lambda);
+    }
+
+    @Override
+    public List<GroupUserVO> selectByUserIds(List<Integer> realUserId) {
+        return this.baseMapper.selectByUserIds(realUserId);
+    }
+    
+    @Override
+    public List<String> selectGroupByUser(List<String> userNames) {
+        return this.baseMapper.selectGroupByUser(userNames);
     }
 }
