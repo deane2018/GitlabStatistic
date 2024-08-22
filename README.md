@@ -18,7 +18,8 @@
 
 ### 1、数据库文件
 
-见`codex.sql`
+见[codex.sql](https://github.com/LeYunone/codex/blob/master/src/main/resources/codex.sql)
+
 
 ### 2、部署项目
 
