@@ -6,9 +6,9 @@ spring:
   application:
     name: leyunone-codex
   datasource:
-    url: jdbc:mysql://127.0.0.1:3306/codex?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true&useSSL=false&rewriteBatchedStatements=true
-    username: root
-    password: root
+    url: jdbc:mysql://168.168.83.99:3306/gitlab_statistic?useUnicode=true&characterEncoding=utf-8&serverTimezone=Asia/Shanghai&allowMultiQueries=true&useSSL=false&rewriteBatchedStatements=true
+    username: gitOpr
+    password: 12345678
     driver-class-name: com.mysql.jdbc.Driver
     druid:
       initial-size: 20 #连接池初始化大小
@@ -49,18 +49,18 @@ spring:
       mail.smtp.connectiontimeout: 60000
       mail.smtp.timeout: 60000
       mail.smtp.writetimeout: 60000
-#xxl:
-#  job:
-#    admin:
-#      addresses: http://127.0.0.1:9999/xxl-job-admin
-#    accessToken:
-#    executor:
-#      appname: codex
-#      address:
-#      ip:
-#      port: 9997
-#      logpath:
-#      logretentiondays: 30
+xxl:
+  job:
+    admin:
+      addresses: http://168.168.83.99:18082/xxl-job-admin
+    accessToken:
+    executor:
+      appname: codex
+      address:
+      ip:
+      port: 9999
+      logpath:
+      logretentiondays: 30
 ## 打印日志级别
 ### mp日志
 mybatis-plus:
